@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro de itens - Admin</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <!-- admin.html: Página de administração - formulário para cadastrar novos itens no cardápio e listar os já cadastrados. -->
+    <nav class="nav-bar">
+        <a href="/">Cardápio e Pedidos</a>
+        <a href="/admin" class="ativo">Cadastrar itens</a>
+    </nav>
+    <header>
+        <h1>Cadastro de itens do cardápio</h1>
+    </header>
+
+    <main>
+        <section class="cadastro-item">
+            <h2>Novo item</h2>
+            <form id="form-item">
+                <label for="nome">Nome do item:</label>
+                <input type="text" id="nome" name="nome" required>
+                <label for="preco">Preço (R$):</label>
+                <input type="number" id="preco" name="preco" step="0.01" min="0" required>
+                <button type="submit">Cadastrar</button>
+            </form>
+            <p id="msg-admin"></p>
+        </section>
+
+        <section class="lista-itens-admin">
+            <h2>Itens no cardápio</h2>
+            <ul id="lista-itens-admin">
+                <!-- Lista de itens é carregada via JavaScript (GET /api/cardapio). -->
+            </ul>
+        </section>
+    </main>
+
+    <script src="/static/app.js"></script>
+    <script>
+        // Inicialização da página admin: carrega itens e envia formulário de cadastro para a API.
+        document.addEventListener("DOMContentLoaded", function() {
+            carregarCardapioAdmin();
+            document.getElementById("form-item").addEventListener("submit", cadastrarItem);
+        });
+    </script>
+</body>
+</html>

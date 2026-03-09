@@ -1,0 +1,240 @@
+/**
+ * style.css
+ * Estilos globais do sistema: cardápio, formulário de pedido, lista de pedidos e página admin.
+ * Apenas HTML/CSS básico, sem framework.
+ */
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Georgia, "Times New Roman", serif;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 1rem;
+    background: #f8f4ef;
+    color: #333;
+}
+
+/* Barra de navegação: links para Cardápio e Pedidos e Cadastrar itens */
+.nav-bar {
+    display: flex;
+    gap: 1rem;
+    padding: 0.5rem 0;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #ccc;
+}
+
+.nav-bar a {
+    color: #5c4033;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.nav-bar a:hover {
+    text-decoration: underline;
+}
+
+.nav-bar a[href*="/admin"] {
+    margin-left: auto;
+}
+
+.nav-bar a.ativo {
+    text-decoration: underline;
+}
+
+header {
+    border-bottom: 2px solid #8b4513;
+    padding-bottom: 0.5rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+header h1 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: #5c4033;
+}
+
+.link-admin {
+    color: #8b4513;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.link-admin:hover {
+    text-decoration: underline;
+}
+
+main {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+section {
+    background: #fff;
+    padding: 1.25rem;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+section h2 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    font-size: 1.2rem;
+    color: #5c4033;
+}
+
+ul {
+    list-style: none;
+    padding-left: 0;
+}
+
+#lista-cardapio li,
+#lista-itens-admin li {
+    padding: 0.35rem 0;
+    border-bottom: 1px solid #eee;
+}
+
+#lista-cardapio li:last-child,
+#lista-itens-admin li:last-child {
+    border-bottom: none;
+}
+
+#form-pedido label {
+    display: inline-block;
+    min-width: 180px;
+    margin-top: 0.5rem;
+}
+
+#form-pedido input[type="number"] {
+    width: 60px;
+    padding: 0.25rem;
+}
+
+input[type="text"],
+input[type="number"] {
+    padding: 0.4rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+button {
+    margin-top: 1rem;
+    padding: 0.5rem 1rem;
+    background: #8b4513;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+}
+
+button:hover {
+    background: #6d3410;
+}
+
+#msg-pedido,
+#msg-admin {
+    margin-top: 0.75rem;
+    color: #5c4033;
+    font-weight: bold;
+}
+
+.pedidos .pedido-bloco {
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background: #faf6f0;
+    border-radius: 6px;
+    border-left: 4px solid #8b4513;
+}
+
+.pedidos .pedido-bloco ul {
+    margin: 0.5rem 0 0 0;
+}
+
+.pedidos .pedido-bloco li {
+    padding: 0.2rem 0;
+}
+
+.pedidos .pedido-bloco .acoes-pedido {
+    margin-top: 0.5rem;
+}
+
+.pedidos .pedido-bloco .acoes-pedido button,
+.btn-acao {
+    margin: 0 0.25rem 0 0;
+    padding: 0.3rem 0.6rem;
+    font-size: 0.85rem;
+}
+
+.pedidos .form-editar-pedido {
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.pedidos .form-editar-pedido label {
+    display: inline-block;
+    min-width: 160px;
+    margin-top: 0.35rem;
+}
+
+.pedidos .form-editar-pedido input[type="number"] {
+    width: 55px;
+}
+
+.lista-itens-admin .item-cardapio {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid #eee;
+}
+
+.lista-itens-admin .item-cardapio .texto-item {
+    flex: 1;
+}
+
+.lista-itens-admin .item-cardapio .form-editar-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1;
+}
+
+.lista-itens-admin .item-cardapio .form-editar-item input {
+    width: 120px;
+}
+
+.lista-itens-admin .item-cardapio .form-editar-item input[name="preco"] {
+    width: 70px;
+}
+
+.lista-itens-admin .item-cardapio .botoes-item button {
+    margin: 0 0.15rem 0 0;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+}
+
+.cadastro-item form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-width: 320px;
+}
+
+.cadastro-item label {
+    font-weight: bold;
+}
+
+.cadastro-item button {
+    align-self: flex-start;
+}

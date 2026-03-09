@@ -1,0 +1,3 @@
+# Dependências do projeto - Sistema de Pedidos de Restaurante
+# Instalar com: pip install -r requirements.txt
+Flask>=3.0.0

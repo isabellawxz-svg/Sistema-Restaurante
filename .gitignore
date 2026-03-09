@@ -1,0 +1,9 @@
+# Banco SQLite (cada um gera o seu ao rodar init_db.py)
+dados.db
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+env/
