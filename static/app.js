@@ -1,144 +1,221 @@
 /**
  * app.js
- * Comunicação do frontend com a API: busca cardápio, envia pedidos, cadastra itens (admin).
- * Usado tanto na página do cardápio (index) quanto na página admin.
+ * Cardápio, comandas (conta aberta até pagamento) e admin do cardápio.
  */
 
 let itensCardapio = [];
 
-/**
- * Busca os itens do cardápio na API (GET /api/cardapio) e preenche a lista na página principal.
- * Também monta os campos de quantidade para "Anotar pedido".
- */
+var LABEL_FORMA_PAGAMENTO = { dinheiro: "Dinheiro", pix: "PIX", cartao: "Cartão" };
+
+function perfilComandasAtual() {
+    return window.PERFIL_COMANDAS || "garcom";
+}
+
+async function apiFetch(url, options) {
+    const res = await fetch(url, options || {});
+    if (res.status === 401) {
+        window.location.href = "/login";
+        return null;
+    }
+    return res;
+}
+
 async function carregarCardapio() {
     try {
-        const res = await fetch("/api/cardapio");
+        const res = await apiFetch("/api/cardapio");
+        if (!res) return;
         itensCardapio = await res.json();
         const ul = document.getElementById("lista-cardapio");
-        ul.innerHTML = "";
-        itensCardapio.forEach(function(item) {
-            const li = document.createElement("li");
-            li.textContent = item.nome + " - R$ " + item.preco.toFixed(2);
-            ul.appendChild(li);
-        });
-        montarFormularioPedido();
+        if (ul) {
+            ul.innerHTML = "";
+            itensCardapio.forEach(function(item) {
+                const li = document.createElement("li");
+                li.textContent = item.nome + " — R$ " + item.preco.toFixed(2);
+                ul.appendChild(li);
+            });
+        }
     } catch (err) {
         console.error("Erro ao carregar cardápio:", err);
     }
 }
 
-/**
- * Monta na tela os campos de quantidade para cada item do cardápio (para anotar pedido).
- */
-function montarFormularioPedido() {
-    const div = document.getElementById("form-pedido");
-    div.innerHTML = "";
-    itensCardapio.forEach(function(item) {
-        const label = document.createElement("label");
-        label.textContent = item.nome + " (qtd): ";
-        const input = document.createElement("input");
-        input.type = "number";
-        input.min = 0;
-        input.value = 0;
-        input.dataset.idItem = item.id;
-        input.dataset.nome = item.nome;
-        div.appendChild(label);
-        div.appendChild(input);
-        div.appendChild(document.createElement("br"));
-    });
-}
-
-/**
- * Envia o pedido para a API (POST /api/pedidos) com os itens que têm quantidade > 0.
- */
-async function enviarPedido() {
-    const inputs = document.querySelectorAll("#form-pedido input[type=number]");
-    const itens = [];
-    inputs.forEach(function(input) {
-        const qtd = parseInt(input.value, 10);
-        if (qtd > 0) {
-            itens.push({ id_item: parseInt(input.dataset.idItem, 10), quantidade: qtd });
-        }
-    });
-    if (itens.length === 0) {
-        document.getElementById("msg-pedido").textContent = "Selecione pelo menos um item.";
+async function abrirComanda() {
+    const mesa = document.getElementById("comanda-mesa").value.trim();
+    const clienteNome = document.getElementById("comanda-cliente").value.trim();
+    const msg = document.getElementById("msg-comanda");
+    if (!mesa) {
+        msg.textContent = "Informe a mesa ou referência.";
         return;
     }
     try {
-        const res = await fetch("/api/pedidos", {
+        const res = await apiFetch("/api/comandas", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ itens: itens })
+            body: JSON.stringify({ mesa: mesa, cliente_nome: clienteNome })
         });
+        if (!res) return;
         const data = await res.json();
         if (res.ok) {
-            document.getElementById("msg-pedido").textContent = "Pedido #" + data.id + " enviado!";
-            inputs.forEach(function(i) { i.value = 0; });
-            carregarPedidos();
+            msg.textContent = "Comanda #" + data.id + " aberta. Use «Editar itens» nela para lançar o consumo.";
+            document.getElementById("comanda-mesa").value = "";
+            document.getElementById("comanda-cliente").value = "";
+            carregarComandas();
         } else {
-            document.getElementById("msg-pedido").textContent = data.erro || "Erro ao enviar pedido.";
+            msg.textContent = data.erro || "Erro ao abrir comanda.";
         }
     } catch (err) {
-        document.getElementById("msg-pedido").textContent = "Erro de conexão.";
+        msg.textContent = "Erro de conexão.";
         console.error(err);
     }
 }
 
-/**
- * Busca todos os pedidos na API (GET /api/pedidos) e exibe na seção "Pedidos realizados".
- * Inclui botões Editar e Excluir e formulário de edição (quantidades) por pedido.
- */
-async function carregarPedidos() {
+function renderBlocoComanda(ped, divPai, perfil) {
+    perfil = perfil || perfilComandasAtual();
+    const bloco = document.createElement("div");
+    bloco.className = "comanda-bloco";
+    bloco.dataset.id = ped.id;
+    bloco.dataset.comanda = JSON.stringify(ped);
+    const fechada = ped.status === "fechada";
+    const badgeStatus = fechada
+        ? "<span class=\"badge badge-comanda-fechada\">Fechada</span>"
+        : "<span class=\"badge badge-comanda-aberta\">Aberta</span>";
+    const pagBadge = ped.pagamento_status === "pago"
+        ? "<span class=\"badge badge-pago\">Pago" +
+          (ped.forma_pagamento ? " · " + escapeHtml(LABEL_FORMA_PAGAMENTO[ped.forma_pagamento] || ped.forma_pagamento) : "") +
+          "</span>"
+        : "<span class=\"badge badge-pendente\">Pagamento pendente</span>";
+    const refCliente = ped.cliente_nome
+        ? "<span class=\"meta-linha\">Cliente: " + escapeHtml(ped.cliente_nome) + "</span>"
+        : "";
+    let html = "<div class=\"comanda-cabecalho\"><div><strong>Comanda #" + ped.id + "</strong> " +
+        badgeStatus + " " + pagBadge +
+        "</div><div class=\"comanda-meta\">" +
+        "<span class=\"meta-linha\">Mesa: " + escapeHtml(ped.mesa || "—") + "</span>" +
+        refCliente +
+        "<span class=\"meta-linha\">Aberta em: " + escapeHtml(ped.criado_em) + "</span>";
+    if (fechada && ped.fechada_em) {
+        html += "<span class=\"meta-linha\">Fechada em: " + escapeHtml(ped.fechada_em) + "</span>";
+    }
+    html += "<span class=\"meta-linha total-comanda\">Total: R$ " + Number(ped.total).toFixed(2) + "</span>" +
+        "</div></div>";
+    if (ped.itens.length === 0) {
+        const msgVazia = perfil === "caixa"
+            ? "Sem itens lançados — aguardando o salão."
+            : "Nenhum item lançado — use «Editar itens» para incluir do cardápio.";
+        html += "<p class=\"comanda-vazia-msg\">" + msgVazia + "</p>";
+    } else {
+        html += "<ul class=\"lista-itens-comanda\">";
+        ped.itens.forEach(function(item) {
+            html += "<li>" + item.quantidade + "× " + escapeHtml(item.nome) + " — R$ " +
+                (item.quantidade * item.preco).toFixed(2) + "</li>";
+        });
+        html += "</ul>";
+    }
+    if (!fechada && perfil === "caixa") {
+        html += "<div class=\"fluxo-pagamento\"><span class=\"fluxo-titulo\">Pagamento</span>";
+        if (ped.pagamento_status === "pendente") {
+            html += "<div class=\"linha-pagamento\">" +
+                "<label>Forma <select class=\"select-forma-pagamento\" data-id=\"" + ped.id + "\">" +
+                "<option value=\"\">Escolha…</option>" +
+                "<option value=\"dinheiro\">Dinheiro</option>" +
+                "<option value=\"pix\">PIX</option>" +
+                "<option value=\"cartao\">Cartão</option></select></label> " +
+                "<button type=\"button\" class=\"btn-registrar-pago\" data-id=\"" + ped.id + "\">Pagar e fechar comanda</button></div>" +
+                "<p class=\"fluxo-msg dica-pagamento\">Ao pagar, a comanda fecha e baixa estoque conforme a ficha técnica.</p>";
+        }
+        html += "</div>";
+    }
+    html += "<div class=\"acoes-comanda\">";
+    if ((perfil === "garcom" || perfil === "caixa") && ped.pode_editar_itens) {
+        html += "<button type=\"button\" class=\"btn-lancar-modal\" data-id=\"" + ped.id + "\">Lançar / editar itens</button>";
+    }
+    if ((perfil === "garcom" || perfil === "caixa") && ped.pode_excluir) {
+        html += "<button type=\"button\" class=\"btn-excluir-comanda\">Excluir comanda</button>";
+    }
+    html += "</div>";
+    bloco.innerHTML = html;
+    divPai.appendChild(bloco);
+
+    bloco.querySelectorAll(".btn-excluir-comanda").forEach(function(btn) {
+        btn.addEventListener("click", function() {
+            const id = bloco.dataset.id;
+            if (confirm("Excluir a comanda #" + id + "?")) excluirComanda(id);
+        });
+    });
+    bloco.querySelectorAll(".btn-lancar-modal").forEach(function(btn) {
+        btn.addEventListener("click", function() {
+            if (typeof abrirModalLancamentoComanda === "function") {
+                abrirModalLancamentoComanda(parseInt(btn.dataset.id, 10));
+            }
+        });
+    });
+    bloco.querySelectorAll(".btn-registrar-pago").forEach(function(btn) {
+        btn.addEventListener("click", function() {
+            const id = parseInt(btn.dataset.id, 10);
+            const sel = bloco.querySelector(".select-forma-pagamento");
+            const forma = sel ? sel.value : "";
+            patchPagamentoComanda(id, forma);
+        });
+    });
+}
+
+async function carregarComandas() {
+    const perfil = perfilComandasAtual();
     try {
-        const res = await fetch("/api/pedidos");
-        const pedidos = await res.json();
-        const div = document.getElementById("lista-pedidos");
-        div.innerHTML = "";
-        pedidos.forEach(function(ped) {
-            const bloco = document.createElement("div");
-            bloco.className = "pedido-bloco";
-            bloco.dataset.id = ped.id;
-            bloco.dataset.pedido = JSON.stringify(ped);
-            let html = "<strong>Pedido #" + ped.id + "</strong> (" + ped.criado_em + ")<ul>";
-            ped.itens.forEach(function(item) {
-                html += "<li>" + item.quantidade + "x " + item.nome + " - R$ " + (item.quantidade * item.preco).toFixed(2) + "</li>";
-            });
-            html += "</ul><div class=\"acoes-pedido\"><button type=\"button\" class=\"btn-editar-pedido\">Editar</button><button type=\"button\" class=\"btn-excluir-pedido\">Excluir</button></div><div class=\"form-editar-pedido\" style=\"display:none\"></div>";
-            bloco.innerHTML = html;
-            div.appendChild(bloco);
-        });
-        // Delegação de eventos: Excluir e Editar
-        div.querySelectorAll(".btn-excluir-pedido").forEach(function(btn) {
-            btn.addEventListener("click", function() {
-                const bloco = btn.closest(".pedido-bloco");
-                const id = bloco.dataset.id;
-                if (confirm("Excluir o pedido #" + id + "?")) excluirPedido(id);
-            });
-        });
-        div.querySelectorAll(".btn-editar-pedido").forEach(function(btn) {
-            btn.addEventListener("click", function() {
-                const bloco = btn.closest(".pedido-bloco");
-                const id = bloco.dataset.id;
-                const pedido = JSON.parse(bloco.dataset.pedido);
-                mostrarFormEditarPedido(bloco, parseInt(id, 10), pedido);
-            });
-        });
+        const resAb = await apiFetch("/api/comandas?situacao=aberta");
+        const resFe = await apiFetch("/api/comandas?situacao=fechada");
+        if (!resAb || !resFe) return;
+        const abertas = await resAb.json();
+        const fechadas = await resFe.json();
+        const divAb = document.getElementById("lista-comandas-abertas");
+        const divFe = document.getElementById("lista-comandas-fechadas");
+        if (!divAb || !divFe) return;
+        divAb.innerHTML = "";
+        divFe.innerHTML = "";
+        if (abertas.length === 0) {
+            divAb.innerHTML = "<p class=\"lista-vazia\">Nenhuma comanda aberta.</p>";
+        } else {
+            abertas.forEach(function(c) { renderBlocoComanda(c, divAb, perfil); });
+        }
+        if (fechadas.length === 0) {
+            divFe.innerHTML = "<p class=\"lista-vazia\">Nenhuma comanda fechada ainda.</p>";
+        } else {
+            fechadas.forEach(function(c) { renderBlocoComanda(c, divFe, perfil); });
+        }
     } catch (err) {
-        console.error("Erro ao carregar pedidos:", err);
+        console.error("Erro ao carregar comandas:", err);
     }
 }
 
-/**
- * Exclui um pedido (DELETE /api/pedidos/:id) e recarrega a lista.
- */
-async function excluirPedido(id) {
+async function patchPagamentoComanda(idComanda, formaPagamento) {
     try {
-        const res = await fetch("/api/pedidos/" + id, { method: "DELETE" });
+        const res = await apiFetch("/api/comandas/" + idComanda + "/pagamento", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ pagamento_status: "pago", forma_pagamento: formaPagamento })
+        });
+        if (!res) return;
+        const data = await res.json();
+        if (!res.ok) {
+            alert(data.erro || "Não foi possível registrar o pagamento.");
+            return;
+        }
+        carregarComandas();
+    } catch (e) {
+        alert("Erro de conexão.");
+        console.error(e);
+    }
+}
+
+async function excluirComanda(id) {
+    try {
+        const res = await apiFetch("/api/comandas/" + id, { method: "DELETE" });
+        if (!res) return;
         if (res.ok) {
-            carregarPedidos();
+            carregarComandas();
         } else {
             const data = await res.json();
-            alert(data.erro || "Erro ao excluir pedido.");
+            alert(data.erro || "Erro ao excluir comanda.");
         }
     } catch (err) {
         alert("Erro de conexão.");
@@ -146,81 +223,16 @@ async function excluirPedido(id) {
     }
 }
 
-/**
- * Mostra o formulário de edição de pedido (quantidades por item) dentro do bloco e salva com PUT.
- */
-function mostrarFormEditarPedido(bloco, idPedido, pedido) {
-    const formDiv = bloco.querySelector(".form-editar-pedido");
-    if (formDiv.style.display === "block") {
-        formDiv.innerHTML = "";
-        formDiv.style.display = "none";
-        return;
-    }
-    formDiv.innerHTML = "";
-    itensCardapio.forEach(function(item) {
-        const qtd = (pedido.itens.find(function(i) { return i.id_item === item.id; }) || {}).quantidade || 0;
-        const label = document.createElement("label");
-        label.textContent = item.nome + " (qtd): ";
-        const input = document.createElement("input");
-        input.type = "number";
-        input.min = 0;
-        input.value = qtd;
-        input.dataset.idItem = item.id;
-        formDiv.appendChild(label);
-        formDiv.appendChild(input);
-        formDiv.appendChild(document.createElement("br"));
-    });
-    const btnSalvar = document.createElement("button");
-    btnSalvar.type = "button";
-    btnSalvar.textContent = "Salvar";
-    btnSalvar.className = "btn-acao";
-    const btnCancelar = document.createElement("button");
-    btnCancelar.type = "button";
-    btnCancelar.textContent = "Cancelar";
-    btnCancelar.className = "btn-acao";
-    formDiv.appendChild(btnSalvar);
-    formDiv.appendChild(btnCancelar);
-    formDiv.style.display = "block";
-
-    btnSalvar.addEventListener("click", async function() {
-        const inputs = formDiv.querySelectorAll("input[type=number]");
-        const itens = [];
-        inputs.forEach(function(input) {
-            const qtd = parseInt(input.value, 10);
-            if (qtd > 0) {
-                itens.push({ id_item: parseInt(input.dataset.idItem, 10), quantidade: qtd });
-            }
-        });
-        try {
-            const res = await fetch("/api/pedidos/" + idPedido, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ itens: itens })
-            });
-            if (res.ok) {
-                formDiv.innerHTML = "";
-                formDiv.style.display = "none";
-                carregarPedidos();
-            } else {
-                const data = await res.json();
-                alert(data.erro || "Erro ao salvar.");
-            }
-        } catch (err) {
-            alert("Erro de conexão.");
-        }
-    });
-    btnCancelar.addEventListener("click", function() {
-        formDiv.innerHTML = "";
-        formDiv.style.display = "none";
-    });
+function escapeHtml(texto) {
+    const div = document.createElement("div");
+    div.textContent = texto;
+    return div.innerHTML;
 }
 
-/**
- * Carrega o cardápio na página admin e preenche a lista com botões Editar e Excluir por item.
- */
 async function carregarCardapioAdmin() {
     try {
-        const res = await fetch("/api/cardapio");
+        const res = await apiFetch("/api/cardapio");
+        if (!res) return;
         const itens = await res.json();
         const ul = document.getElementById("lista-itens-admin");
         ul.innerHTML = "";
@@ -253,18 +265,10 @@ async function carregarCardapioAdmin() {
     }
 }
 
-function escapeHtml(texto) {
-    const div = document.createElement("div");
-    div.textContent = texto;
-    return div.innerHTML;
-}
-
-/**
- * Exclui um item do cardápio (DELETE /api/cardapio/:id) e recarrega a lista no admin.
- */
 async function excluirItem(id) {
     try {
-        const res = await fetch("/api/cardapio/" + id, { method: "DELETE" });
+        const res = await apiFetch("/api/cardapio/" + id, { method: "DELETE" });
+        if (!res) return;
         if (res.ok) {
             carregarCardapioAdmin();
         } else {
@@ -277,9 +281,6 @@ async function excluirItem(id) {
     }
 }
 
-/**
- * Mostra formulário inline para editar nome e preço do item; Salvar envia PUT /api/cardapio/:id.
- */
 function mostrarFormEditarItem(li, id, nomeAtual, precoAtual) {
     if (li.querySelector(".form-editar-item")) {
         return;
@@ -300,11 +301,12 @@ function mostrarFormEditarItem(li, id, nomeAtual, precoAtual) {
             return;
         }
         try {
-            const res = await fetch("/api/cardapio/" + id, {
+            const res = await apiFetch("/api/cardapio/" + id, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ nome: nome, preco: preco })
             });
+            if (!res) return;
             if (res.ok) {
                 li.removeChild(form);
                 textoEl.style.display = "";
@@ -325,9 +327,6 @@ function mostrarFormEditarItem(li, id, nomeAtual, precoAtual) {
     });
 }
 
-/**
- * Envia o novo item do formulário para a API (POST /api/cardapio) e atualiza a lista.
- */
 async function cadastrarItem(ev) {
     ev.preventDefault();
     const nome = document.getElementById("nome").value.trim();
@@ -338,11 +337,12 @@ async function cadastrarItem(ev) {
         return;
     }
     try {
-        const res = await fetch("/api/cardapio", {
+        const res = await apiFetch("/api/cardapio", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ nome: nome, preco: preco })
         });
+        if (!res) return;
         const data = await res.json();
         if (res.ok) {
             msg.textContent = "Item cadastrado: " + data.nome;
@@ -354,5 +354,107 @@ async function cadastrarItem(ev) {
     } catch (err) {
         msg.textContent = "Erro de conexão.";
         console.error(err);
+    }
+}
+
+var LABEL_PAPEL = { admin: "Administrador", caixa: "Caixa", garcom: "Garçom" };
+
+async function carregarUsuariosAdmin() {
+    const div = document.getElementById("lista-usuarios");
+    if (!div) return;
+    try {
+        const res = await apiFetch("/api/usuarios");
+        if (!res) return;
+        if (!res.ok) {
+            div.textContent = "Não foi possível carregar usuários.";
+            return;
+        }
+        const usuarios = await res.json();
+        div.innerHTML = "";
+        if (usuarios.length === 0) {
+            div.innerHTML = "<p class=\"lista-vazia\">Nenhum usuário.</p>";
+            return;
+        }
+        usuarios.forEach(function(u) {
+            const bloco = document.createElement("div");
+            bloco.className = "usuario-linha";
+            const selPapel = "<select class=\"usuario-papel\" data-id=\"" + u.id + "\">" +
+                ["garcom", "caixa", "admin"].map(function(p) {
+                    return "<option value=\"" + p + "\"" + (u.papel === p ? " selected" : "") + ">" +
+                        escapeHtml(LABEL_PAPEL[p]) + "</option>";
+                }).join("") + "</select>";
+            const chkAtivo = "<label class=\"usuario-ativo\"><input type=\"checkbox\" class=\"usuario-ativo-cb\" data-id=\"" +
+                u.id + "\"" + (u.ativo ? " checked" : "") + "> Ativo</label>";
+            const inpNome = "<input type=\"text\" class=\"usuario-nome\" data-id=\"" + u.id + "\" value=\"" +
+                escapeHtml(u.nome_exibicao) + "\" placeholder=\"Nome\">";
+            const inpSenha = "<input type=\"password\" class=\"usuario-senha\" data-id=\"" + u.id +
+                "\" placeholder=\"Nova senha (opcional)\">";
+            bloco.innerHTML = "<div class=\"usuario-campos\"><strong>" + escapeHtml(u.login) + "</strong> " +
+                inpNome + selPapel + chkAtivo + inpSenha +
+                "<button type=\"button\" class=\"btn-salvar-usuario\" data-id=\"" + u.id + "\">Salvar</button></div>";
+            div.appendChild(bloco);
+        });
+        div.querySelectorAll(".btn-salvar-usuario").forEach(function(btn) {
+            btn.addEventListener("click", function() { salvarUsuarioAdmin(parseInt(btn.dataset.id, 10)); });
+        });
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+async function salvarUsuarioAdmin(id) {
+    const msg = document.getElementById("msg-usuarios");
+    const papel = document.querySelector(".usuario-papel[data-id=\"" + id + "\"]").value;
+    const nome = document.querySelector(".usuario-nome[data-id=\"" + id + "\"]").value.trim();
+    const ativo = document.querySelector(".usuario-ativo-cb[data-id=\"" + id + "\"]").checked;
+    const senhaEl = document.querySelector(".usuario-senha[data-id=\"" + id + "\"]");
+    const senha = senhaEl.value;
+    const body = { papel: papel, nome_exibicao: nome, ativo: ativo };
+    if (senha) body.senha = senha;
+    try {
+        const res = await apiFetch("/api/usuarios/" + id, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body)
+        });
+        if (!res) return;
+        const data = await res.json();
+        if (res.ok) {
+            msg.textContent = "Usuário atualizado.";
+            senhaEl.value = "";
+            carregarUsuariosAdmin();
+        } else {
+            msg.textContent = data.erro || "Erro ao salvar.";
+        }
+    } catch (e) {
+        msg.textContent = "Erro de conexão.";
+    }
+}
+
+async function cadastrarUsuarioAdmin(ev) {
+    ev.preventDefault();
+    const msg = document.getElementById("msg-usuarios");
+    msg.textContent = "";
+    const login = document.getElementById("novo-login").value.trim().toLowerCase();
+    const nome = document.getElementById("novo-nome").value.trim();
+    const papel = document.getElementById("novo-papel").value;
+    const senha = document.getElementById("novo-senha").value;
+    try {
+        const res = await apiFetch("/api/usuarios", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ login: login, nome_exibicao: nome, papel: papel, senha: senha })
+        });
+        if (!res) return;
+        const data = await res.json();
+        if (res.ok) {
+            msg.textContent = "Usuário criado: " + data.login;
+            document.getElementById("form-usuario").reset();
+            carregarUsuariosAdmin();
+        } else {
+            msg.textContent = data.erro || "Erro ao criar.";
+        }
+    } catch (e) {
+        msg.textContent = "Erro de conexão.";
     }
 }

@@ -1,0 +1,23 @@
+{% extends "layout_operacional.html" %}
+{% block title %}Financeiro{% endblock %}
+{% block h1 %}Financeiro{% endblock %}
+{% block content %}
+<section>
+    <p class="intro-comanda">Resumo de receitas (comandas quitadas) e valor das compras registradas no período.</p>
+    <div class="filtro-financeiro">
+        <label>De <input type="date" id="fin-inicio"></label>
+        <label>Até <input type="date" id="fin-fim"></label>
+        <button type="button" id="btn-fin-atualizar">Atualizar</button>
+    </div>
+    <div id="painel-financeiro" class="painel-financeiro"></div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script src="/static/admin_financeiro.js"></script>
+<script>
+window.PERFIL_COMANDAS = "caixa";
+document.addEventListener("DOMContentLoaded", function() {
+    initModalComandas();
+});
+</script>
+{% endblock %}

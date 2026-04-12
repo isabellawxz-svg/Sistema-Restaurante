@@ -1,0 +1,33 @@
+{% extends "layout_admin.html" %}
+{% block title %}Usuários{% endblock %}
+{% block h1 %}Usuários e papéis{% endblock %}
+{% block content %}
+<section class="usuarios-admin">
+    <p class="intro-comanda">Papéis: <strong>admin</strong>, <strong>caixa</strong> (pagamento e também pode lançar itens na comanda), <strong>garcom</strong> (só comandas no salão).</p>
+    <form id="form-usuario" class="form-usuario">
+        <h2>Novo usuário</h2>
+        <label>Login <input type="text" id="novo-login" required autocomplete="off" minlength="2"></label>
+        <label>Nome para exibição <input type="text" id="novo-nome" placeholder="Opcional"></label>
+        <label>Papel
+            <select id="novo-papel" required>
+                <option value="garcom">Garçom</option>
+                <option value="caixa">Caixa</option>
+                <option value="admin">Administrador</option>
+            </select>
+        </label>
+        <label>Senha inicial <input type="password" id="novo-senha" required minlength="4" autocomplete="new-password"></label>
+        <button type="submit">Criar usuário</button>
+    </form>
+    <p id="msg-usuarios"></p>
+    <h2>Usuários cadastrados</h2>
+    <div id="lista-usuarios" class="lista-usuarios"></div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    carregarUsuariosAdmin();
+    document.getElementById("form-usuario").addEventListener("submit", cadastrarUsuarioAdmin);
+});
+</script>
+{% endblock %}

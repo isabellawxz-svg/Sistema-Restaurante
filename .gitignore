@@ -1,5 +1,6 @@
 # Banco SQLite (cada um gera o seu ao rodar init_db.py)
 dados.db
+dados_backup*.db
 
 # Python
 __pycache__/

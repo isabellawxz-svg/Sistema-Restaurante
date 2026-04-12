@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Administração{% endblock %} — Restaurante</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="app-shell app-shell--admin">
+    {% include "_sidebar_staff.html" %}
+    <div class="shell-main">
+        <header class="shell-header">
+            <h1>{% block h1 %}Administração{% endblock %}</h1>
+        </header>
+        <main class="shell-content">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    <script src="/static/app.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

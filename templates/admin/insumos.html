@@ -1,0 +1,21 @@
+{% extends "layout_admin.html" %}
+{% block title %}Insumos{% endblock %}
+{% block h1 %}Insumos e estoque{% endblock %}
+{% block content %}
+<section>
+    <p class="intro-comanda">Insumos são matérias-primas (café em pó, pão, etc.). O estoque sobe com <a href="/admin/notas-compra">notas de compra</a> e desce ao fechar comandas conforme a <a href="/admin/receitas">ficha técnica</a> de cada prato.</p>
+    <form id="form-insumo" class="form-inline-admin">
+        <h2>Novo insumo</h2>
+        <label>Nome <input type="text" id="insumo-nome" required></label>
+        <label>Unidade <input type="text" id="insumo-unidade" placeholder="kg, L, un" value="un"></label>
+        <label>Estoque inicial <input type="number" id="insumo-estoque" step="0.0001" value="0"></label>
+        <button type="submit">Cadastrar</button>
+    </form>
+    <p id="msg-insumos"></p>
+    <h2>Estoque atual</h2>
+    <div id="lista-insumos"></div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script src="/static/admin_insumos.js"></script>
+{% endblock %}

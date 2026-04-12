@@ -1,0 +1,17 @@
+{% extends "layout_admin.html" %}
+{% block title %}Financeiro{% endblock %}
+{% block h1 %}Financeiro{% endblock %}
+{% block content %}
+<section>
+    <p class="intro-comanda">Receita das comandas fechadas no período (valor na quitação) e total das compras registradas no mesmo período.</p>
+    <div class="filtro-financeiro">
+        <label>De <input type="date" id="fin-inicio"></label>
+        <label>Até <input type="date" id="fin-fim"></label>
+        <button type="button" id="btn-fin-atualizar">Atualizar</button>
+    </div>
+    <div id="painel-financeiro" class="painel-financeiro"></div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script src="/static/admin_financeiro.js"></script>
+{% endblock %}

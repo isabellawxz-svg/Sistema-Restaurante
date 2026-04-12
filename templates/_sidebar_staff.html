@@ -1,0 +1,35 @@
+{# Barra lateral única: mesma estrutura em admin e operação; links conforme o papel. #}
+{% set p = request.path %}
+{% set role = session.get("role") or "" %}
+<aside class="sidebar sidebar--staff">
+    <p class="sidebar-marca">Restaurante</p>
+    <nav class="sidebar-nav">
+        {% if role == "admin" %}
+            <p class="sidebar-grupo">Administração</p>
+            <a href="/admin/visao" class="sidebar-link{% if p == '/admin' or p == '/admin/visao' %} is-active{% endif %}">Visão geral</a>
+            <a href="/admin/cardapio" class="sidebar-link{% if p == '/admin/cardapio' %} is-active{% endif %}">Cardápio e preços</a>
+            <a href="/admin/usuarios" class="sidebar-link{% if p == '/admin/usuarios' %} is-active{% endif %}">Usuários</a>
+            <a href="/admin/insumos" class="sidebar-link{% if p == '/admin/insumos' %} is-active{% endif %}">Insumos e estoque</a>
+            <a href="/admin/notas-compra" class="sidebar-link{% if p == '/admin/notas-compra' %} is-active{% endif %}">Notas de compra</a>
+            <a href="/admin/receitas" class="sidebar-link{% if p == '/admin/receitas' %} is-active{% endif %}">Receitas (ficha técnica)</a>
+            <a href="/admin/financeiro" class="sidebar-link{% if p == '/admin/financeiro' %} is-active{% endif %}">Financeiro (admin)</a>
+        {% endif %}
+
+        {% if role == "admin" or role == "garcom" or role == "caixa" %}
+            <p class="sidebar-grupo">Operação</p>
+        {% endif %}
+        {% if role == "admin" or role == "garcom" %}
+            <a href="/garcom" class="sidebar-link{% if p == '/garcom' %} is-active{% endif %}">Salão (garçom)</a>
+        {% endif %}
+        {% if role == "admin" or role == "caixa" %}
+            <a href="/caixa" class="sidebar-link{% if p == '/caixa' %} is-active{% endif %}">Caixa — comandas</a>
+        {% endif %}
+        {% if role == "admin" or role == "caixa" %}
+            <a href="/caixa/financeiro" class="sidebar-link{% if p == '/caixa/financeiro' %} is-active{% endif %}">Financeiro (caixa)</a>
+        {% endif %}
+    </nav>
+    <div class="sidebar-footer">
+        <span class="sidebar-user">{{ session.get("nome", "") }}</span>
+        <a href="/logout" class="sidebar-logout">Sair</a>
+    </div>
+</aside>

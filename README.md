@@ -1,104 +1,112 @@
-# Sistema de Pedidos de Restaurante
+# Sistema de comandas — Restaurante
 
-Projeto para demonstrar conceitos de **banco de dados**, **backend** e **frontend**: cardápio com itens pré-definidos (ou cadastrados), tela para anotar pedidos e tela simples para cadastrar itens no cardápio.
+Aplicação web didática em **Python (Flask)**, **SQLite** e **HTML/CSS/JavaScript** (sem framework de front-end), para gestão de **comandas**, **caixa**, **administração** (cardápio, usuários, insumos, compras, receitas) e **resumo financeiro**, com controle de acesso por **papel** (admin, caixa, garçom).
 
-## Objetivo
+## Documentação por entrega
 
-Mostrar de forma didática como as três camadas funcionam juntas:
-
-- **Banco de dados (SQLite):** armazena itens do cardápio e pedidos.
-- **Backend (Flask):** API que lê e grava no banco e devolve dados em JSON.
-- **Frontend (HTML/CSS/JS):** telas que consomem a API e exibem os dados.
+| Arquivo | Conteúdo |
+|---------|----------|
+| [README_ENTREGA_1.md](README_ENTREGA_1.md) | Primeira entrega: núcleo pedagógico (camadas, SQLite, API, front com cardápio e fluxo inicial). |
+| [README_ENTREGA_2.md](README_ENTREGA_2.md) | Segunda entrega: comandas, papéis, sidebar, modal de lançamento, estoque, notas de compra, ficha técnica, financeiro. |
 
 ## Stack
 
-| Camada   | Tecnologia              |
-|----------|-------------------------|
-| Banco    | SQLite (arquivo `dados.db`) |
-| Backend  | Python 3 + Flask        |
-| Frontend | HTML, CSS e JavaScript (sem framework) |
+| Camada   | Tecnologia |
+|----------|------------|
+| Banco    | SQLite (`dados.db`) |
+| Backend  | Python 3 + Flask |
+| Front    | HTML, CSS, JS (fetch), templates Jinja2 |
 
 ## Pré-requisitos
 
-- Python 3 instalado no PC.
+- Python 3 instalado.
 
 ## Como rodar
 
-Abra o terminal (ou Prompt de Comando no Windows), entre na pasta do projeto e execute os comandos abaixo **um por vez**. O nome do comando de Python e do pip varia conforme o sistema.
+Pasta do projeto (ajuste o caminho se a sua cópia estiver em outro lugar):
 
-### Linux e macOS
+`/Users/matheus/Documents/github/restauranteapp`
 
-Geralmente o executável é `python3` e o gerenciador de pacotes é `pip3`:
+### Ambiente virtual (recomendado)
+
+**macOS / Linux (zsh/bash):**
 
 ```bash
-pip3 install -r requirements.txt
+cd /Users/matheus/Documents/github/restauranteapp
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 python3 init_db.py
 python3 app.py
 ```
 
-### Windows
-
-No Windows o comando costuma ser `python` e `pip`. Se não funcionar, tente `py` em vez de `python`:
+**Windows (cmd):**
 
 ```cmd
+cd C:\caminho\para\restauranteapp
+python -m venv .venv
+.venv\Scripts\activate.bat
 pip install -r requirements.txt
 python init_db.py
 python app.py
 ```
 
-Ou, com `py`:
+Com o venv ativo, o prompt costuma começar com `(.venv)`.
 
-```cmd
-py -m pip install -r requirements.txt
-py init_db.py
-py app.py
+### Sem venv
+
+```bash
+cd /Users/matheus/Documents/github/restauranteapp
+pip3 install -r requirements.txt
+python3 init_db.py
+python3 app.py
 ```
 
-### Depois de subir o servidor
+O **`init_db.py`** também dispara o **`seed_demo_estoque.py`**: se ainda não houver insumos, são criados **insumos de exemplo**, **cinco notas de compra** e **receitas (ficha técnica)** para os itens do cardápio. Para pular isso, apague ou comente a chamada no final de `init_db.py`. Para **reaplicar** o seed num banco já usado, é preciso esvaziar/remover insumos (ou apagar `dados.db` e rodar `init_db.py` de novo).
 
-1. **Criar o banco** — `init_db.py` só precisa ser executado na primeira vez; ele cria o arquivo `dados.db` e insere itens de exemplo no cardápio.
-2. Com `app.py` rodando, abra no navegador:
-   - **Cardápio e pedidos:** http://127.0.0.1:5000  
-   - **Cadastro de itens (admin):** http://127.0.0.1:5000/admin  
+1. **`init_db.py`** — cria `dados.db` e tabelas iniciais (rode na primeira vez ou após apagar o banco).
+2. **`app.py`** — ao importar o módulo, executa **`ensure_schema()`** (cria/ajusta tabelas). Se a tabela **`usuarios`** estiver **vazia**, é criado automaticamente um usuário **`admin`** com senha **`admin123`** (troque em produção).
+3. Acesse **`/login`**. Demais usuários podem ser cadastrados na tela **Usuários** (como admin).
 
-A navegação entre as telas é feita pela barra no topo. Na tela principal é possível **editar** e **excluir** pedidos; na tela admin é possível **editar** e **excluir** itens do cardápio.
+## Fluxo resumido
 
-## Estrutura do projeto
+- **`/`** — redireciona para login ou para a home do papel (admin → visão geral, caixa → caixa, garçom → salão).
+- **Garçom** — apenas **Salão**: abrir/editar comandas e lançar itens no **modal** (estilo PDV).
+- **Caixa** — **Caixa** (comandas, pagamento, lançar/editar itens) e **Financeiro (caixa)**.
+- **Admin** — todas as telas de administração, salão, caixa e ambos os financeiros.
+
+A **barra lateral** é **fixa** (permanece na tela ao rolar o conteúdo) e **a mesma estrutura** em todas as páginas autenticadas; só entram os **links permitidos ao papel** atual.
+
+## Estrutura do projeto (principal)
 
 ```
-projeto-facu/
-├── README.md          ← Este arquivo (explicação do projeto)
-├── ROTEIRO.md         ← Roteiro para apresentar/explicar o sistema
-├── requirements.txt   ← Dependências (Flask)
-├── app.py             ← Servidor e rotas da API
-├── init_db.py         ← Criação das tabelas no SQLite (rodar uma vez)
-├── dados.db           ← Banco SQLite (gerado ao rodar init_db.py)
+├── README.md                 ← Visão geral (este arquivo)
+├── README_ENTREGA_1.md
+├── README_ENTREGA_2.md
+├── ROTEIRO.md
+├── requirements.txt
+├── app.py                    ← Rotas, API e regras de negócio
+├── init_db.py                ← Criação do SQLite (+ seed de estoque se vazio)
+├── seed_demo_estoque.py      ← Insumos, notas e receitas de demonstração
+├── dados.db                  ← Gerado após init_db
 ├── static/
-│   ├── style.css      ← Estilos das páginas
-│   └── app.js         ← Chamadas à API e atualização da tela
+│   ├── style.css
+│   ├── app.js
+│   ├── comandas_modal.js
+│   └── admin_*.js            ← Telas admin específicas
 └── templates/
-    ├── index.html     ← Página do cardápio e anotar pedido
-    └── admin.html     ← Página para cadastrar itens no cardápio
+    ├── login.html
+    ├── layout_admin.html
+    ├── layout_operacional.html
+    ├── _sidebar_staff.html   ← Menu lateral único (por papel)
+    ├── garcom.html
+    ├── caixa.html
+    ├── caixa_financeiro.html
+    └── admin/                ← Páginas fragmentadas da administração
 ```
 
-## Conceitos demonstrados
+## API (visão geral)
 
-- **Banco:** tabelas (`itens_cardapio`, `pedidos`, `itens_pedido`), INSERT, SELECT, relacionamento entre pedido e itens.
-- **Backend:** rotas GET/POST, leitura e escrita no SQLite, respostas em JSON.
-- **Frontend:** formulários, `fetch` para a API, exibição dinâmica dos dados (cardápio, pedidos, lista de itens no admin).
+As rotas **`/api/*`** exigem sessão autenticada; várias exigem papel **admin** ou combinações (comandas: admin/caixa/garçom; pagamento: admin/caixa; cardápio escrita: admin; etc.). Detalhes e lista completa em **README_ENTREGA_2.md**.
 
-## API (resumo)
-
-| Método | Rota                  | Descrição                          |
-|--------|------------------------|------------------------------------|
-| GET    | /api/cardapio          | Lista itens do cardápio            |
-| POST   | /api/cardapio          | Cadastra novo item (admin)         |
-| PUT    | /api/cardapio/:id      | Edita item (nome e/ou preço)       |
-| DELETE | /api/cardapio/:id      | Exclui item do cardápio            |
-| GET    | /api/pedidos           | Lista todos os pedidos             |
-| GET    | /api/pedidos/:id       | Retorna um pedido (para edição)    |
-| POST   | /api/pedidos           | Cria um novo pedido                |
-| PUT    | /api/pedidos/:id       | Edita pedido (substitui itens)     |
-| DELETE | /api/pedidos/:id       | Exclui pedido                      |
-
-Para mais detalhes sobre o sistema, use o **ROTEIRO.md**.
+Para roteiro de apresentação em sala, use **ROTEIRO.md** (ajuste se o roteiro ainda citar telas antigas).

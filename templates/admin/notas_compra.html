@@ -1,0 +1,24 @@
+{% extends "layout_admin.html" %}
+{% block title %}Notas de compra{% endblock %}
+{% block h1 %}Notas de compra{% endblock %}
+{% block content %}
+<section>
+    <p class="intro-comanda">Lançamento manual da nota: informe fornecedor, itens (insumo, quantidade, valor unitário) e salve. O estoque dos insumos é atualizado na hora.</p>
+    <form id="form-nota" class="form-nota">
+        <h2>Nova nota</h2>
+        <label>Fornecedor <input type="text" id="nota-fornecedor"></label>
+        <label>Nº documento <input type="text" id="nota-numero"></label>
+        <label>Data <input type="date" id="nota-data"></label>
+        <label>Observação <input type="text" id="nota-obs"></label>
+        <div id="nota-itens-linhas"></div>
+        <button type="button" id="btn-nota-add-linha">+ Linha</button>
+        <button type="submit">Registrar nota</button>
+    </form>
+    <p id="msg-notas"></p>
+    <h2>Notas registradas</h2>
+    <div id="lista-notas"></div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script src="/static/admin_notas.js"></script>
+{% endblock %}

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Operação{% endblock %} — Restaurante</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="app-shell app-shell--ops">
+    {% include "_sidebar_staff.html" %}
+    <div class="shell-main">
+        <header class="shell-header">
+            <h1>{% block h1 %}Operação{% endblock %}</h1>
+        </header>
+        <main class="shell-content">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <div id="modal-comanda-root" class="modal-root" aria-hidden="true" style="display:none;">
+        <div class="modal-backdrop" data-fechar-modal="1"></div>
+        <div class="modal-panel" role="dialog" aria-modal="true">
+            <div class="modal-cabecalho">
+                <h2 id="modal-comanda-titulo" class="modal-titulo">Comanda</h2>
+                <button type="button" class="modal-fechar" data-fechar-modal aria-label="Fechar">&times;</button>
+            </div>
+            <div id="modal-comanda-corpo" class="modal-corpo"></div>
+            <div class="modal-rodape" id="modal-comanda-rodape"></div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+    <script src="/static/comandas_modal.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

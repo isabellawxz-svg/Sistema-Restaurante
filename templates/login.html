@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login — Restaurante</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="pagina-login">
+    <main class="login-box">
+        <h1>Acesso ao sistema</h1>
+        <p class="login-descricao">Uso interno: administração, caixa ou salão.</p>
+        {% if negado %}
+        <p class="login-alerta">Você não tem permissão para acessar aquela área.</p>
+        {% endif %}
+        <form id="form-login" class="form-login">
+            <label for="login">Usuário</label>
+            <input type="text" id="login" name="login" autocomplete="username" required>
+            <label for="senha">Senha</label>
+            <input type="password" id="senha" name="senha" autocomplete="current-password" required>
+            <button type="submit">Entrar</button>
+        </form>
+        <p id="msg-login" class="msg-login"></p>
+        <p class="login-dica">Primeiro acesso: usuário <code>admin</code> e senha <code>admin123</code> — altere em Administração após entrar.</p>
+    </main>
+    <script src="/static/login.js"></script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+{% extends "layout_admin.html" %}
+{% block title %}Receitas{% endblock %}
+{% block h1 %}Ficha técnica (receita){% endblock %}
+{% block content %}
+<section>
+    <p class="intro-comanda">Para cada item do <strong>cardápio</strong>, defina quanto de cada <strong>insumo</strong> é consumido <em>por 1 unidade vendida</em> (ex.: 0,15 kg de carne por hambúrguer). Sem receita cadastrada, o pagamento da comanda não baixa estoque daquele prato.</p>
+    <label>Item do cardápio
+        <select id="receita-item-cardapio"></select>
+    </label>
+    <button type="button" id="btn-receita-carregar">Carregar receita</button>
+    <div id="receita-linhas"></div>
+    <button type="button" id="btn-receita-add">+ Insumo</button>
+    <button type="button" id="btn-receita-salvar">Salvar receita</button>
+    <p id="msg-receitas"></p>
+</section>
+{% endblock %}
+{% block scripts %}
+<script src="/static/admin_receitas.js"></script>
+{% endblock %}

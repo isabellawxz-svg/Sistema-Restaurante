@@ -1,0 +1,15 @@
+{% extends "layout_admin.html" %}
+{% block title %}Visão geral{% endblock %}
+{% block h1 %}Visão geral{% endblock %}
+{% block content %}
+<section class="painel-intro">
+    <p>Use o menu à esquerda para separar cadastros, estoque, compras, fichas técnicas dos pratos e o financeiro.</p>
+    <ul class="lista-links-rapidos">
+        <li><a href="/admin/cardapio">Cardápio</a> — itens vendidos e preços</li>
+        <li><a href="/admin/insumos">Insumos</a> — matérias-primas e quantidade em estoque</li>
+        <li><a href="/admin/notas-compra">Notas de compra</a> — entrada manual que aumenta o estoque</li>
+        <li><a href="/admin/receitas">Receitas</a> — quanto de cada insumo entra em cada prato (para baixa ao pagar comanda)</li>
+        <li><a href="/admin/financeiro">Financeiro</a> — receita por período</li>
+    </ul>
+</section>
+{% endblock %}

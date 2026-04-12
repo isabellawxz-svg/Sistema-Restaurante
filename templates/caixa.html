@@ -1,0 +1,27 @@
+{% extends "layout_operacional.html" %}
+{% block title %}Caixa{% endblock %}
+{% block h1 %}Caixa — comandas{% endblock %}
+{% block content %}
+<section class="ops-acoes-topo">
+    <p class="intro-comanda">Conferência, <strong>ajuste de itens no modal</strong> (como no salão) e registro de pagamento. Comandas com <strong>receita cadastrada</strong> baixam estoque ao pagar; se faltar insumo, o sistema bloqueia a quitação.</p>
+    <button type="button" class="btn-primario" id="btn-nova-comanda-modal">+ Nova comanda</button>
+</section>
+<section class="comandas comandas-abertas">
+    <h2>Comandas em aberto</h2>
+    <div id="lista-comandas-abertas"></div>
+</section>
+<section class="comandas comandas-historico">
+    <h2>Histórico — fechadas</h2>
+    <div id="lista-comandas-fechadas"></div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+window.PERFIL_COMANDAS = "caixa";
+document.addEventListener("DOMContentLoaded", function() {
+    initModalComandas();
+    carregarCardapio().then(function() { carregarComandas(); });
+    document.getElementById("btn-nova-comanda-modal").addEventListener("click", abrirModalNovaComanda);
+});
+</script>
+{% endblock %}

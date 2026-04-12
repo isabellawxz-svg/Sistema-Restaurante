@@ -1,7 +1,6 @@
 /**
  * style.css
- * Estilos globais do sistema: cardápio, formulário de pedido, lista de pedidos e página admin.
- * Apenas HTML/CSS básico, sem framework.
+ * Cardápio, comandas e página admin. HTML/CSS básico, sem framework.
  */
 
 * {
@@ -17,7 +16,398 @@ body {
     color: #333;
 }
 
-/* Barra de navegação: links para Cardápio e Pedidos e Cadastrar itens */
+body.app-shell {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+}
+
+.app-shell {
+    min-height: 100vh;
+    position: relative;
+}
+
+.app-shell .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 220px;
+    z-index: 100;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background: #3d2914;
+    color: #f5f0e8;
+    padding: 1rem 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-grupo {
+    margin: 0.65rem 1rem 0.25rem;
+    padding: 0;
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.45);
+    font-family: system-ui, sans-serif;
+}
+
+.sidebar-grupo:first-of-type {
+    margin-top: 0.15rem;
+}
+
+.sidebar-marca {
+    font-weight: bold;
+    padding: 0 1rem 0.75rem;
+    margin: 0;
+    border-bottom: 1px solid rgba(255,255,255,0.15);
+    font-size: 1rem;
+}
+
+.sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    padding: 0.75rem 0;
+    flex: 1;
+}
+
+.sidebar-link {
+    color: #e8dcc8;
+    text-decoration: none;
+    padding: 0.45rem 1rem;
+    font-size: 0.92rem;
+}
+
+.sidebar-link:hover {
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+}
+
+.sidebar-link.is-active {
+    background: rgba(255,255,255,0.12);
+    color: #fff;
+    font-weight: bold;
+    border-left: 3px solid #d4a574;
+}
+
+.sidebar-link--muted {
+    opacity: 0.85;
+    font-size: 0.88rem;
+}
+
+.sidebar-sep {
+    border: none;
+    border-top: 1px solid rgba(255,255,255,0.12);
+    margin: 0.5rem 0.75rem;
+}
+
+.sidebar--staff .sidebar-footer {
+    padding: 0.75rem 1rem;
+    margin-top: auto;
+    border-top: 1px solid rgba(255,255,255,0.15);
+    font-size: 0.85rem;
+}
+
+.sidebar-user {
+    display: block;
+    color: #ccc;
+    margin-bottom: 0.35rem;
+}
+
+.sidebar-logout {
+    color: #d4a574;
+    font-weight: bold;
+}
+
+.app-shell .shell-main {
+    margin-left: 220px;
+    min-height: 100vh;
+    width: calc(100% - 220px);
+    max-width: none;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    background: #f8f4ef;
+}
+
+.shell-header {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding: 1rem 1.25rem;
+    background: #fff;
+    border-bottom: 1px solid #ddd;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+
+.shell-header h1 {
+    margin: 0;
+    flex: 1;
+    font-size: 1.35rem;
+    color: #5c4033;
+}
+
+.shell-header-user {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.shell-header-logout {
+    color: #8b4513;
+    font-weight: bold;
+    text-decoration: none;
+}
+
+.shell-content {
+    padding: 1.25rem;
+    max-width: 1100px;
+}
+
+.shell-content section {
+    background: #fff;
+    padding: 1.25rem;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    margin-bottom: 1.25rem;
+}
+
+.painel-intro .lista-links-rapidos {
+    list-style: disc;
+    padding-left: 1.25rem;
+}
+
+.painel-intro .lista-links-rapidos a {
+    color: #8b4513;
+}
+
+.ops-acoes-topo {
+    margin-bottom: 0.5rem;
+}
+
+.btn-primario {
+    padding: 0.55rem 1rem;
+    background: #8b4513;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1rem;
+}
+
+.btn-primario:hover {
+    background: #6d3410;
+}
+
+.btn-secundario {
+    padding: 0.5rem 0.85rem;
+    margin-left: 0.35rem;
+    background: #e5e7eb;
+    color: #333;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.modal-root {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+}
+
+.modal-panel {
+    position: relative;
+    z-index: 1;
+    background: #fff;
+    border-radius: 10px;
+    max-width: 520px;
+    width: 100%;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+}
+
+.modal-cabecalho {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #e5ded4;
+}
+
+.modal-titulo {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #5c4033;
+}
+
+.modal-fechar {
+    border: none;
+    background: transparent;
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+    color: #666;
+}
+
+.modal-corpo {
+    padding: 1rem;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.modal-rodape {
+    padding: 0.75rem 1rem;
+    border-top: 1px solid #e5ded4;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    align-items: center;
+}
+
+.modal-form-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.modal-form-grid input {
+    width: 100%;
+    max-width: 320px;
+}
+
+.modal-itens-scroll {
+    max-height: 55vh;
+    overflow-y: auto;
+    margin-top: 0.5rem;
+}
+
+.modal-linha-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.35rem 0;
+    border-bottom: 1px solid #eee;
+}
+
+.modal-qtd-item {
+    width: 70px;
+}
+
+.preco-mini {
+    color: #666;
+    font-size: 0.85rem;
+}
+
+.msg-modal {
+    color: #991b1b;
+    font-size: 0.9rem;
+    min-height: 1.2em;
+}
+
+.tabela-admin {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.92rem;
+}
+
+.tabela-admin th,
+.tabela-admin td {
+    border: 1px solid #e5ded4;
+    padding: 0.4rem 0.5rem;
+    text-align: left;
+}
+
+.tabela-admin thead {
+    background: #faf6f0;
+}
+
+.form-inline-admin label,
+.form-nota label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    margin-bottom: 0.5rem;
+    max-width: 360px;
+}
+
+.nota-linha,
+.receita-linha {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.filtro-financeiro {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: flex-end;
+    margin-bottom: 1rem;
+}
+
+.fin-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.fin-card {
+    background: #faf6f0;
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid #e5ded4;
+}
+
+.fin-valor {
+    font-size: 1.35rem;
+    font-weight: bold;
+    color: #2f6f4e;
+    margin: 0.25rem 0;
+}
+
+.fin-sub,
+.fin-periodo {
+    color: #666;
+    font-size: 0.88rem;
+    margin: 0;
+}
+
+.fin-titulo-sec {
+    margin: 1rem 0 0.35rem;
+    font-size: 1rem;
+}
+
+.fin-lista-forma {
+    list-style: none;
+    padding: 0;
+}
+
+.fin-lista-forma li {
+    padding: 0.25rem 0;
+}
+
+.msg-erro {
+    color: #991b1b;
+}
+
+/* Barra de navegação */
 .nav-bar {
     display: flex;
     gap: 1rem;
@@ -36,8 +426,31 @@ body {
     text-decoration: underline;
 }
 
-.nav-bar a[href*="/admin"] {
+/* Empurra "Admin" à direita só em barras antigas sem bloco de usuário */
+.nav-bar:not(.nav-bar--staff) a[href*="/admin"] {
     margin-left: auto;
+}
+
+.nav-bar--staff {
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.nav-bar--staff .nav-usuario {
+    margin-left: auto;
+    font-size: 0.9rem;
+    color: #555;
+    padding: 0 0.5rem;
+}
+
+.nav-bar--staff .nav-sair {
+    color: #8b4513;
+    font-weight: bold;
+    text-decoration: none;
+}
+
+.nav-bar--staff .nav-sair:hover {
+    text-decoration: underline;
 }
 
 .nav-bar a.ativo {
@@ -106,17 +519,6 @@ ul {
     border-bottom: none;
 }
 
-#form-pedido label {
-    display: inline-block;
-    min-width: 180px;
-    margin-top: 0.5rem;
-}
-
-#form-pedido input[type="number"] {
-    width: 60px;
-    padding: 0.25rem;
-}
-
 input[type="text"],
 input[type="number"] {
     padding: 0.4rem;
@@ -139,14 +541,14 @@ button:hover {
     background: #6d3410;
 }
 
-#msg-pedido,
+#msg-comanda,
 #msg-admin {
     margin-top: 0.75rem;
     color: #5c4033;
     font-weight: bold;
 }
 
-.pedidos .pedido-bloco {
+.comandas .comanda-bloco {
     margin-bottom: 1rem;
     padding: 0.75rem;
     background: #faf6f0;
@@ -154,26 +556,177 @@ button:hover {
     border-left: 4px solid #8b4513;
 }
 
-.pedidos .pedido-bloco ul {
+.intro-comanda {
+    margin-top: 0;
+    color: #555;
+    font-size: 0.95rem;
+}
+
+.campos-identificacao {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.campos-identificacao .campo-inline {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+.campos-identificacao input[type="text"] {
+    min-width: 200px;
+    font-weight: normal;
+}
+
+.campos-identificacao .opcional {
+    font-weight: normal;
+    color: #666;
+    font-size: 0.85rem;
+}
+
+.comanda-cabecalho {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.comanda-meta {
+    text-align: right;
+    font-size: 0.88rem;
+    color: #555;
+}
+
+.comanda-meta .meta-linha {
+    display: block;
+}
+
+.comanda-meta .total-comanda {
+    font-weight: bold;
+    color: #5c4033;
+    margin-top: 0.25rem;
+}
+
+.lista-itens-comanda {
+    margin: 0.5rem 0 0.75rem 0;
+    padding-left: 1.1rem;
+    list-style: disc;
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    vertical-align: middle;
+}
+
+.badge-comanda-aberta {
+    background: #dbeafe;
+    color: #1e3a5f;
+}
+
+.badge-comanda-fechada {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+.badge-pago {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.badge-pendente {
+    background: #ffedd5;
+    color: #9a3412;
+}
+
+.comandas .fluxo-pagamento {
+    margin: 0.75rem 0 0 0;
+    padding: 0.75rem;
+    background: #fff;
+    border-radius: 6px;
+    border: 1px solid #e5ded4;
+}
+
+.fluxo-titulo {
+    display: block;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #8b7355;
+    margin-bottom: 0.4rem;
+}
+
+.fluxo-msg {
+    margin: 0.25rem 0 0 0;
+    font-size: 0.88rem;
+    color: #666;
+}
+
+.linha-pagamento {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.25rem;
+}
+
+.linha-pagamento select {
+    padding: 0.35rem;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+}
+
+.dica-pagamento {
+    margin-top: 0.5rem;
+    font-size: 0.82rem;
+}
+
+.btn-registrar-pago {
+    margin: 0;
+    padding: 0.4rem 0.65rem;
+    font-size: 0.85rem;
+    background: #2f6f4e;
+}
+
+.btn-registrar-pago:hover {
+    background: #255a3f;
+}
+
+.lista-vazia,
+.comanda-vazia-msg {
+    color: #666;
+    font-size: 0.95rem;
     margin: 0.5rem 0 0 0;
 }
 
-.pedidos .pedido-bloco li {
+.comandas .comanda-bloco ul {
+    margin: 0.5rem 0 0 0;
+}
+
+.comandas .comanda-bloco li {
     padding: 0.2rem 0;
 }
 
-.pedidos .pedido-bloco .acoes-pedido {
+.comandas .comanda-bloco .acoes-comanda {
     margin-top: 0.5rem;
 }
 
-.pedidos .pedido-bloco .acoes-pedido button,
+.comandas .comanda-bloco .acoes-comanda button,
 .btn-acao {
     margin: 0 0.25rem 0 0;
     padding: 0.3rem 0.6rem;
     font-size: 0.85rem;
 }
 
-.pedidos .form-editar-pedido {
+.comandas .form-editar-comanda {
     margin-top: 0.75rem;
     padding: 0.75rem;
     background: #fff;
@@ -181,13 +734,13 @@ button:hover {
     border-radius: 4px;
 }
 
-.pedidos .form-editar-pedido label {
+.comandas .form-editar-comanda label {
     display: inline-block;
     min-width: 160px;
     margin-top: 0.35rem;
 }
 
-.pedidos .form-editar-pedido input[type="number"] {
+.comandas .form-editar-comanda input[type="number"] {
     width: 55px;
 }
 
@@ -237,4 +790,134 @@ button:hover {
 
 .cadastro-item button {
     align-self: flex-start;
+}
+
+.subtitulo-papel {
+    margin: 0.25rem 0 0 0;
+    font-size: 0.95rem;
+    color: #666;
+    font-weight: normal;
+}
+
+.pagina-login {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+}
+
+.login-box {
+    background: #fff;
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    max-width: 400px;
+    width: 100%;
+}
+
+.login-box h1 {
+    margin-top: 0;
+    font-size: 1.35rem;
+    color: #5c4033;
+}
+
+.login-descricao,
+.login-dica {
+    font-size: 0.9rem;
+    color: #555;
+}
+
+.login-dica code {
+    background: #f0ebe4;
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
+}
+
+.login-alerta {
+    color: #991b1b;
+    font-size: 0.9rem;
+}
+
+.form-login {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    margin-top: 1rem;
+}
+
+.form-login label {
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+.msg-login {
+    margin-top: 0.75rem;
+    color: #991b1b;
+    font-weight: bold;
+}
+
+.usuarios-admin .form-usuario {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-width: 420px;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: #faf8f5;
+    border-radius: 8px;
+    border: 1px solid #e5ded4;
+}
+
+.form-usuario h3 {
+    margin: 0 0 0.25rem 0;
+    font-size: 1rem;
+}
+
+.form-usuario label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-weight: bold;
+    font-size: 0.88rem;
+}
+
+#msg-usuarios {
+    margin: 0.5rem 0;
+    font-weight: bold;
+    color: #5c4033;
+}
+
+.usuario-linha {
+    margin-bottom: 0.75rem;
+    padding: 0.65rem;
+    background: #faf6f0;
+    border-radius: 6px;
+    border-left: 3px solid #8b4513;
+}
+
+.usuario-campos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.usuario-campos strong {
+    min-width: 100px;
+}
+
+.usuario-campos input[type="text"],
+.usuario-campos input[type="password"] {
+    width: 140px;
+}
+
+.usuario-campos .usuario-papel {
+    padding: 0.35rem;
+}
+
+.btn-salvar-usuario {
+    margin-top: 0;
+    padding: 0.35rem 0.65rem;
+    font-size: 0.85rem;
 }

@@ -1,0 +1,27 @@
+{% extends "layout_operacional.html" %}
+{% block title %}Salão{% endblock %}
+{% block h1 %}Salão — comandas{% endblock %}
+{% block content %}
+<section class="ops-acoes-topo">
+    <p class="intro-comanda">Abra uma nova comanda ou selecione uma aberta para <strong>lançar itens no modal</strong>. O pagamento é feito no caixa.</p>
+    <button type="button" class="btn-primario" id="btn-nova-comanda-modal">+ Nova comanda</button>
+</section>
+<section class="comandas comandas-abertas">
+    <h2>Comandas abertas</h2>
+    <div id="lista-comandas-abertas"></div>
+</section>
+<section class="comandas comandas-historico">
+    <h2>Histórico — fechadas</h2>
+    <div id="lista-comandas-fechadas"></div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+window.PERFIL_COMANDAS = "garcom";
+document.addEventListener("DOMContentLoaded", function() {
+    initModalComandas();
+    carregarCardapio().then(function() { carregarComandas(); });
+    document.getElementById("btn-nova-comanda-modal").addEventListener("click", abrirModalNovaComanda);
+});
+</script>
+{% endblock %}
