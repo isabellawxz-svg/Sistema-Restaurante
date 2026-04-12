@@ -1,6 +1,6 @@
 # Explicação do sistema – Pedidos de Restaurante
 
-O sistema é dividido em três partes: banco de dados, backend e frontend.
+O sistema é dividido em três partes:  banco de dados, backend e frontend.
 
 **Banco de dados:** os dados ficam no SQLite, no arquivo `dados.db`. O cardápio e os pedidos são gravados e lidos a partir daí.
 
