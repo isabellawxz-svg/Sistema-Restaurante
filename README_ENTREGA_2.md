@@ -74,6 +74,8 @@ Esta entrega descreve **tudo que foi aplicado** na segunda fase: modelo mais pr�
 | GET/POST | `/api/notas-compra` | admin |
 | GET/PUT | `/api/cardapio/<id>/composicao` | admin |
 | GET | `/api/financeiro/resumo` | admin, caixa |
+| GET | `/api/financeiro/ranking-itens` | admin, caixa — query: `inicio`, `fim`, `limit` |
+| GET | `/api/admin/dashboard` | admin — comandas abertas, receita do dia, alertas de estoque |
 
 *(Detalhes de corpo JSON e códigos de erro: ver implementação em `app.py`.)*
 

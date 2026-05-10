@@ -9,6 +9,7 @@
         <label>Nome <input type="text" id="insumo-nome" required></label>
         <label>Unidade <input type="text" id="insumo-unidade" placeholder="kg, L, un" value="un"></label>
         <label>Estoque inicial <input type="number" id="insumo-estoque" step="0.0001" value="0"></label>
+        <label>Estoque mínimo (alerta) <input type="number" id="insumo-minimo" step="0.0001" value="0" min="0" title="Avisa quando o estoque atual estiver igual ou abaixo deste valor"></label>
         <button type="submit">Cadastrar</button>
     </form>
     <p id="msg-insumos"></p>

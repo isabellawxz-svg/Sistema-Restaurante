@@ -183,6 +183,23 @@ def _ensure_insumos_compras_composicao(cursor):
     """)
 
 
+def _ensure_itens_cardapio_categoria(cursor):
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='itens_cardapio'")
+    if not cursor.fetchone():
+        return
+    cursor.execute("PRAGMA table_info(itens_cardapio)")
+    cols = {r[1] for r in cursor.fetchall()}
+    if "categoria" not in cols:
+        cursor.execute("ALTER TABLE itens_cardapio ADD COLUMN categoria TEXT NOT NULL DEFAULT ''")
+
+
+def _ensure_insumos_estoque_minimo(cursor):
+    cursor.execute("PRAGMA table_info(insumos)")
+    cols = {r[1] for r in cursor.fetchall()}
+    if "estoque_minimo" not in cols:
+        cursor.execute("ALTER TABLE insumos ADD COLUMN estoque_minimo REAL NOT NULL DEFAULT 0")
+
+
 def ensure_schema():
     _ensure_legacy_pedidos_columns()
     conn = sqlite3.connect(DB_PATH)
@@ -222,6 +239,8 @@ def ensure_schema():
     """)
     _ensure_comandas_total_quitacao(cursor)
     _ensure_insumos_compras_composicao(cursor)
+    _ensure_itens_cardapio_categoria(cursor)
+    _ensure_insumos_estoque_minimo(cursor)
     conn.commit()
     _migrate_pedidos_para_comandas(cursor)
     _seed_usuario_admin(cursor)
@@ -492,8 +511,22 @@ def caixa_financeiro():
 def listar_cardapio():
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT id, nome, preco FROM itens_cardapio ORDER BY nome")
-    itens = [{"id": row["id"], "nome": row["nome"], "preco": row["preco"]} for row in cursor.fetchall()]
+    cursor.execute(
+        """
+        SELECT id, nome, preco, COALESCE(categoria, '') AS categoria
+        FROM itens_cardapio
+        ORDER BY categoria, nome
+        """
+    )
+    itens = [
+        {
+            "id": row["id"],
+            "nome": row["nome"],
+            "preco": row["preco"],
+            "categoria": row["categoria"] or "",
+        }
+        for row in cursor.fetchall()
+    ]
     conn.close()
     return jsonify(itens)
 
@@ -504,6 +537,7 @@ def cadastrar_item():
     dados = request.get_json()
     nome = dados.get("nome")
     preco = dados.get("preco")
+    categoria = (dados.get("categoria") or "").strip()
     if not nome or preco is None:
         return jsonify({"erro": "nome e preco são obrigatórios"}), 400
     try:
@@ -512,11 +546,14 @@ def cadastrar_item():
         return jsonify({"erro": "preco deve ser um número"}), 400
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO itens_cardapio (nome, preco) VALUES (?, ?)", (nome.strip(), preco))
+    cursor.execute(
+        "INSERT INTO itens_cardapio (nome, preco, categoria) VALUES (?, ?, ?)",
+        (nome.strip(), preco, categoria),
+    )
     conn.commit()
     id_novo = cursor.lastrowid
     conn.close()
-    return jsonify({"id": id_novo, "nome": nome, "preco": preco}), 201
+    return jsonify({"id": id_novo, "nome": nome.strip(), "preco": preco, "categoria": categoria}), 201
 
 
 @app.route("/api/cardapio/<int:id_item>", methods=["PUT"])
@@ -525,6 +562,7 @@ def editar_item(id_item):
     dados = request.get_json() or {}
     nome = dados.get("nome")
     preco = dados.get("preco")
+    categoria = dados.get("categoria")
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("SELECT id FROM itens_cardapio WHERE id = ?", (id_item,))
@@ -540,11 +578,26 @@ def editar_item(id_item):
         except (TypeError, ValueError):
             conn.close()
             return jsonify({"erro": "preco deve ser um número"}), 400
+    if categoria is not None:
+        cursor.execute(
+            "UPDATE itens_cardapio SET categoria = ? WHERE id = ?",
+            ((categoria or "").strip(), id_item),
+        )
     conn.commit()
-    cursor.execute("SELECT id, nome, preco FROM itens_cardapio WHERE id = ?", (id_item,))
+    cursor.execute(
+        "SELECT id, nome, preco, COALESCE(categoria, '') AS categoria FROM itens_cardapio WHERE id = ?",
+        (id_item,),
+    )
     row = cursor.fetchone()
     conn.close()
-    return jsonify({"id": row["id"], "nome": row["nome"], "preco": row["preco"]})
+    return jsonify(
+        {
+            "id": row["id"],
+            "nome": row["nome"],
+            "preco": row["preco"],
+            "categoria": row["categoria"] or "",
+        }
+    )
 
 
 @app.route("/api/cardapio/<int:id_item>", methods=["DELETE"])
@@ -917,14 +970,26 @@ def excluir_comanda(id_comanda):
 def listar_insumos():
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT id, nome, unidade, estoque_atual, criado_em FROM insumos ORDER BY nome")
+    cursor.execute(
+        """
+        SELECT id, nome, unidade, estoque_atual, COALESCE(estoque_minimo, 0) AS estoque_minimo, criado_em
+        FROM insumos ORDER BY nome
+        """
+    )
     lista = [
         {
             "id": r["id"],
             "nome": r["nome"],
             "unidade": r["unidade"],
             "estoque_atual": round(float(r["estoque_atual"]), 4),
+            "estoque_minimo": round(float(r["estoque_minimo"]), 4),
             "criado_em": r["criado_em"],
+            "alerta_estoque": (
+                float(r["estoque_atual"]) <= 0
+                or (
+                    float(r["estoque_minimo"]) > 0 and float(r["estoque_atual"]) <= float(r["estoque_minimo"])
+                )
+            ),
         }
         for r in cursor.fetchall()
     ]
@@ -939,21 +1004,32 @@ def criar_insumo():
     nome = (dados.get("nome") or "").strip()
     unidade = (dados.get("unidade") or "un").strip() or "un"
     estoque = dados.get("estoque_atual")
+    estoque_min = dados.get("estoque_minimo")
     if not nome:
         return jsonify({"erro": "nome é obrigatório"}), 400
     try:
         estoque = float(estoque) if estoque is not None else 0.0
     except (TypeError, ValueError):
         return jsonify({"erro": "estoque_atual inválido"}), 400
+    try:
+        estoque_min = float(estoque_min) if estoque_min is not None else 0.0
+    except (TypeError, ValueError):
+        return jsonify({"erro": "estoque_minimo inválido"}), 400
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute(
-        "INSERT INTO insumos (nome, unidade, estoque_atual) VALUES (?, ?, ?)",
-        (nome, unidade, estoque),
+        "INSERT INTO insumos (nome, unidade, estoque_atual, estoque_minimo) VALUES (?, ?, ?, ?)",
+        (nome, unidade, estoque, max(0.0, estoque_min)),
     )
     conn.commit()
     uid = cursor.lastrowid
-    cursor.execute("SELECT id, nome, unidade, estoque_atual, criado_em FROM insumos WHERE id = ?", (uid,))
+    cursor.execute(
+        """
+        SELECT id, nome, unidade, estoque_atual, COALESCE(estoque_minimo, 0) AS estoque_minimo, criado_em
+        FROM insumos WHERE id = ?
+        """,
+        (uid,),
+    )
     row = cursor.fetchone()
     conn.close()
     return jsonify(
@@ -962,6 +1038,7 @@ def criar_insumo():
             "nome": row["nome"],
             "unidade": row["unidade"],
             "estoque_atual": round(float(row["estoque_atual"]), 4),
+            "estoque_minimo": round(float(row["estoque_minimo"]), 4),
             "criado_em": row["criado_em"],
         }
     ), 201
@@ -980,6 +1057,7 @@ def atualizar_insumo(id_insumo):
     nome = dados.get("nome")
     unidade = dados.get("unidade")
     estoque = dados.get("estoque_atual")
+    estoque_min = dados.get("estoque_minimo")
     if nome is not None:
         cursor.execute("UPDATE insumos SET nome = ? WHERE id = ?", (nome.strip(), id_insumo))
     if unidade is not None:
@@ -991,8 +1069,24 @@ def atualizar_insumo(id_insumo):
         except (TypeError, ValueError):
             conn.close()
             return jsonify({"erro": "estoque_atual inválido"}), 400
+    if estoque_min is not None:
+        try:
+            estoque_min = float(estoque_min)
+            cursor.execute(
+                "UPDATE insumos SET estoque_minimo = ? WHERE id = ?",
+                (max(0.0, estoque_min), id_insumo),
+            )
+        except (TypeError, ValueError):
+            conn.close()
+            return jsonify({"erro": "estoque_minimo inválido"}), 400
     conn.commit()
-    cursor.execute("SELECT id, nome, unidade, estoque_atual, criado_em FROM insumos WHERE id = ?", (id_insumo,))
+    cursor.execute(
+        """
+        SELECT id, nome, unidade, estoque_atual, COALESCE(estoque_minimo, 0) AS estoque_minimo, criado_em
+        FROM insumos WHERE id = ?
+        """,
+        (id_insumo,),
+    )
     row = cursor.fetchone()
     conn.close()
     return jsonify(
@@ -1001,6 +1095,7 @@ def atualizar_insumo(id_insumo):
             "nome": row["nome"],
             "unidade": row["unidade"],
             "estoque_atual": round(float(row["estoque_atual"]), 4),
+            "estoque_minimo": round(float(row["estoque_minimo"]), 4),
             "criado_em": row["criado_em"],
         }
     )
@@ -1247,6 +1342,99 @@ def financeiro_resumo():
             "comandas_fechadas": r1["qtd"],
             "por_forma_pagamento": por_forma,
             "compras_registradas_valor": gasto,
+        }
+    )
+
+
+@app.route("/api/admin/dashboard", methods=["GET"])
+@staff_required("admin")
+def admin_dashboard():
+    hoje = date.today().isoformat()
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM comandas WHERE status = 'aberta'")
+    comandas_abertas = cursor.fetchone()[0]
+    cursor.execute(
+        """
+        SELECT COALESCE(SUM(total_quitacao), 0)
+        FROM comandas
+        WHERE status = 'fechada' AND pagamento_status = 'pago'
+          AND date(fechada_em) = date(?)
+        """,
+        (hoje,),
+    )
+    receita_hoje = round(float(cursor.fetchone()[0]), 2)
+    cursor.execute("SELECT COUNT(*) FROM insumos WHERE estoque_atual <= 0")
+    insumos_sem_estoque = cursor.fetchone()[0]
+    cursor.execute(
+        """
+        SELECT COUNT(*) FROM insumos
+        WHERE estoque_atual > 0 AND estoque_minimo > 0 AND estoque_atual <= estoque_minimo
+        """
+    )
+    insumos_abaixo_minimo = cursor.fetchone()[0]
+    conn.close()
+    return jsonify(
+        {
+            "comandas_abertas": comandas_abertas,
+            "receita_hoje": receita_hoje,
+            "insumos_sem_estoque": insumos_sem_estoque,
+            "insumos_abaixo_minimo": insumos_abaixo_minimo,
+        }
+    )
+
+
+@app.route("/api/financeiro/ranking-itens", methods=["GET"])
+@staff_required("admin", "caixa")
+def financeiro_ranking_itens():
+    ini_s = (request.args.get("inicio") or "").strip()
+    fim_s = (request.args.get("fim") or "").strip()
+    try:
+        lim_raw = request.args.get("limit") or "15"
+        lim = min(max(int(lim_raw), 1), 100)
+    except ValueError:
+        return jsonify({"erro": "limit deve ser inteiro"}), 400
+    try:
+        fim = datetime.strptime(fim_s, "%Y-%m-%d").date() if fim_s else date.today()
+        inicio = datetime.strptime(ini_s, "%Y-%m-%d").date() if ini_s else (fim - timedelta(days=30))
+    except ValueError:
+        return jsonify({"erro": "use datas no formato YYYY-MM-DD"}), 400
+    if inicio > fim:
+        return jsonify({"erro": "data início maior que fim"}), 400
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT ic.id_item, c.nome,
+               SUM(ic.quantidade) AS qtd,
+               SUM(ic.quantidade * c.preco) AS receita
+        FROM itens_comanda ic
+        JOIN comandas co ON co.id = ic.id_comanda
+        JOIN itens_cardapio c ON c.id = ic.id_item
+        WHERE co.status = 'fechada' AND co.pagamento_status = 'pago'
+          AND date(co.fechada_em) BETWEEN date(?) AND date(?)
+        GROUP BY ic.id_item
+        ORDER BY qtd DESC
+        LIMIT ?
+        """,
+        (inicio.isoformat(), fim.isoformat(), lim),
+    )
+    ranking = [
+        {
+            "id_item": r["id_item"],
+            "nome": r["nome"],
+            "quantidade_vendida": int(round(float(r["qtd"]))),
+            "receita": round(float(r["receita"]), 2),
+        }
+        for r in cursor.fetchall()
+    ]
+    conn.close()
+    return jsonify(
+        {
+            "inicio": inicio.isoformat(),
+            "fim": fim.isoformat(),
+            "limit": lim,
+            "itens": ranking,
         }
     )
 

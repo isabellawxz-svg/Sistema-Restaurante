@@ -15,7 +15,8 @@ def criar_banco():
         CREATE TABLE IF NOT EXISTS itens_cardapio (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nome TEXT NOT NULL,
-            preco REAL NOT NULL
+            preco REAL NOT NULL,
+            categoria TEXT NOT NULL DEFAULT ''
         )
     """)
 
@@ -50,6 +51,7 @@ def criar_banco():
             nome TEXT NOT NULL,
             unidade TEXT NOT NULL DEFAULT 'un',
             estoque_atual REAL NOT NULL DEFAULT 0,
+            estoque_minimo REAL NOT NULL DEFAULT 0,
             criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
@@ -104,14 +106,14 @@ def criar_banco():
     cursor.execute("SELECT COUNT(*) FROM itens_cardapio")
     if cursor.fetchone()[0] == 0:
         cursor.executemany(
-            "INSERT INTO itens_cardapio (nome, preco) VALUES (?, ?)",
+            "INSERT INTO itens_cardapio (nome, preco, categoria) VALUES (?, ?, ?)",
             [
-                ("Café", 5.00),
-                ("Suco de Laranja", 8.00),
-                ("Pão na Chapa", 4.50),
-                ("Misto Quente", 12.00),
-                ("Hambúrguer", 18.00),
-                ("Batata Frita", 10.00),
+                ("Café", 5.00, "Bebidas"),
+                ("Suco de Laranja", 8.00, "Bebidas"),
+                ("Pão na Chapa", 4.50, "Lanches"),
+                ("Misto Quente", 12.00, "Lanches"),
+                ("Hambúrguer", 18.00, "Lanches"),
+                ("Batata Frita", 10.00, "Acompanhamentos"),
             ],
         )
 

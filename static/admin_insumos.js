@@ -9,9 +9,19 @@ async function carregarListaInsumos() {
         div.innerHTML = "<p class=\"lista-vazia\">Nenhum insumo cadastrado.</p>";
         return;
     }
-    var tbl = "<table class=\"tabela-admin\"><thead><tr><th>Nome</th><th>Unidade</th><th>Estoque</th></tr></thead><tbody>";
+    var tbl = "<table class=\"tabela-admin\"><thead><tr><th>Nome</th><th>Unidade</th><th>Estoque</th><th>Mínimo</th><th>Status</th></tr></thead><tbody>";
     lista.forEach(function(i) {
-        tbl += "<tr><td>" + escapeHtml(i.nome) + "</td><td>" + escapeHtml(i.unidade) + "</td><td>" + i.estoque_atual + "</td></tr>";
+        var statusHtml = "";
+        if (i.estoque_atual <= 0) {
+            statusHtml = "<span class=\"badge-estoque badge-estoque-critico\">Sem estoque</span>";
+        } else if (i.estoque_minimo > 0 && i.estoque_atual <= i.estoque_minimo) {
+            statusHtml = "<span class=\"badge-estoque badge-estoque-alerta\">Abaixo do mínimo</span>";
+        } else {
+            statusHtml = "<span class=\"badge-estoque badge-estoque-ok\">OK</span>";
+        }
+        var trClass = i.alerta_estoque ? " linha-estoque-alerta" : "";
+        tbl += "<tr class=\"" + trClass.trim() + "\"><td>" + escapeHtml(i.nome) + "</td><td>" + escapeHtml(i.unidade) + "</td><td>" +
+            i.estoque_atual + "</td><td>" + i.estoque_minimo + "</td><td>" + statusHtml + "</td></tr>";
     });
     tbl += "</tbody></table>";
     div.innerHTML = tbl;
@@ -27,6 +37,7 @@ document.addEventListener("DOMContentLoaded", function() {
         var nome = document.getElementById("insumo-nome").value.trim();
         var unidade = document.getElementById("insumo-unidade").value.trim() || "un";
         var est = parseFloat(document.getElementById("insumo-estoque").value);
+        var estMin = parseFloat(document.getElementById("insumo-minimo").value);
         if (!nome) {
             msg.textContent = "Informe o nome.";
             return;
@@ -34,7 +45,12 @@ document.addEventListener("DOMContentLoaded", function() {
         var res = await apiFetch("/api/insumos", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ nome: nome, unidade: unidade, estoque_atual: isNaN(est) ? 0 : est })
+            body: JSON.stringify({
+                nome: nome,
+                unidade: unidade,
+                estoque_atual: isNaN(est) ? 0 : est,
+                estoque_minimo: isNaN(estMin) ? 0 : Math.max(0, estMin)
+            })
         });
         if (!res) return;
         var data = await res.json();
@@ -42,6 +58,7 @@ document.addEventListener("DOMContentLoaded", function() {
             msg.textContent = "Insumo cadastrado.";
             form.reset();
             document.getElementById("insumo-unidade").value = "un";
+            document.getElementById("insumo-minimo").value = "0";
             carregarListaInsumos();
         } else {
             msg.textContent = data.erro || "Erro.";

@@ -30,7 +30,8 @@ async function carregarCardapio() {
             ul.innerHTML = "";
             itensCardapio.forEach(function(item) {
                 const li = document.createElement("li");
-                li.textContent = item.nome + " — R$ " + item.preco.toFixed(2);
+                var suf = item.categoria ? " · " + item.categoria : "";
+                li.textContent = item.nome + suf + " — R$ " + item.preco.toFixed(2);
                 ul.appendChild(li);
             });
         }
@@ -240,7 +241,13 @@ async function carregarCardapioAdmin() {
             const li = document.createElement("li");
             li.className = "item-cardapio";
             li.dataset.id = item.id;
-            li.innerHTML = "<span class=\"texto-item\">" + escapeHtml(item.nome) + " - R$ " + item.preco.toFixed(2) + "</span><span class=\"botoes-item\"><button type=\"button\" class=\"btn-editar-item\">Editar</button><button type=\"button\" class=\"btn-excluir-item\">Excluir</button></span>";
+            li.dataset.nome = item.nome;
+            li.dataset.preco = String(item.preco);
+            li.dataset.categoria = item.categoria || "";
+            var badge = item.categoria
+                ? "<span class=\"item-cat-badge\">" + escapeHtml(item.categoria) + "</span> "
+                : "";
+            li.innerHTML = "<span class=\"texto-item\">" + badge + escapeHtml(item.nome) + " — R$ " + item.preco.toFixed(2) + "</span><span class=\"botoes-item\"><button type=\"button\" class=\"btn-editar-item\">Editar</button><button type=\"button\" class=\"btn-excluir-item\">Excluir</button></span>";
             ul.appendChild(li);
         });
         ul.querySelectorAll(".btn-excluir-item").forEach(function(btn) {
@@ -253,11 +260,10 @@ async function carregarCardapioAdmin() {
             btn.addEventListener("click", function() {
                 const li = btn.closest(".item-cardapio");
                 const id = parseInt(li.dataset.id, 10);
-                const texto = li.querySelector(".texto-item").textContent;
-                const idx = texto.lastIndexOf(" - R$ ");
-                const nome = idx >= 0 ? texto.slice(0, idx) : texto;
-                const preco = idx >= 0 ? texto.slice(idx + 6) : "0";
-                mostrarFormEditarItem(li, id, nome, preco);
+                const nome = li.dataset.nome || "";
+                const preco = li.dataset.preco || "0";
+                const categoria = li.dataset.categoria || "";
+                mostrarFormEditarItem(li, id, nome, preco, categoria);
             });
         });
     } catch (err) {
@@ -281,7 +287,7 @@ async function excluirItem(id) {
     }
 }
 
-function mostrarFormEditarItem(li, id, nomeAtual, precoAtual) {
+function mostrarFormEditarItem(li, id, nomeAtual, precoAtual, categoriaAtual) {
     if (li.querySelector(".form-editar-item")) {
         return;
     }
@@ -291,11 +297,15 @@ function mostrarFormEditarItem(li, id, nomeAtual, precoAtual) {
     botoesEl.style.display = "none";
     const form = document.createElement("div");
     form.className = "form-editar-item";
-    form.innerHTML = "<input type=\"text\" name=\"nome\" value=\"" + escapeHtml(nomeAtual) + "\" placeholder=\"Nome\"><input type=\"number\" name=\"preco\" step=\"0.01\" min=\"0\" value=\"" + precoAtual + "\" placeholder=\"Preço\"><button type=\"button\" class=\"btn-salvar-item\">Salvar</button><button type=\"button\" class=\"btn-cancelar-item\">Cancelar</button>";
+    form.innerHTML = "<input type=\"text\" name=\"nome\" value=\"" + escapeHtml(nomeAtual) + "\" placeholder=\"Nome\">" +
+        "<input type=\"text\" name=\"categoria\" value=\"" + escapeHtml(categoriaAtual || "") + "\" placeholder=\"Categoria\" maxlength=\"60\">" +
+        "<input type=\"number\" name=\"preco\" step=\"0.01\" min=\"0\" value=\"" + escapeHtml(String(precoAtual)) + "\" placeholder=\"Preço\">" +
+        "<button type=\"button\" class=\"btn-salvar-item\">Salvar</button><button type=\"button\" class=\"btn-cancelar-item\">Cancelar</button>";
     li.insertBefore(form, botoesEl);
     form.querySelector(".btn-salvar-item").addEventListener("click", async function() {
         const nome = form.querySelector("input[name=nome]").value.trim();
         const preco = parseFloat(form.querySelector("input[name=preco]").value);
+        const categoria = form.querySelector("input[name=categoria]").value.trim();
         if (!nome || isNaN(preco)) {
             alert("Preencha nome e preço.");
             return;
@@ -304,14 +314,20 @@ function mostrarFormEditarItem(li, id, nomeAtual, precoAtual) {
             const res = await apiFetch("/api/cardapio/" + id, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ nome: nome, preco: preco })
+                body: JSON.stringify({ nome: nome, preco: preco, categoria: categoria })
             });
             if (!res) return;
             if (res.ok) {
                 li.removeChild(form);
                 textoEl.style.display = "";
                 botoesEl.style.display = "";
-                textoEl.textContent = nome + " - R$ " + preco.toFixed(2);
+                li.dataset.nome = nome;
+                li.dataset.preco = String(preco);
+                li.dataset.categoria = categoria;
+                var badge = categoria
+                    ? "<span class=\"item-cat-badge\">" + escapeHtml(categoria) + "</span> "
+                    : "";
+                textoEl.innerHTML = badge + escapeHtml(nome) + " — R$ " + preco.toFixed(2);
             } else {
                 const data = await res.json();
                 alert(data.erro || "Erro ao salvar.");
@@ -340,7 +356,11 @@ async function cadastrarItem(ev) {
         const res = await apiFetch("/api/cardapio", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ nome: nome, preco: preco })
+            body: JSON.stringify({
+                nome: nome,
+                preco: preco,
+                categoria: (document.getElementById("categoria") && document.getElementById("categoria").value.trim()) || ""
+            })
         });
         if (!res) return;
         const data = await res.json();

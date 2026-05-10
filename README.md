@@ -107,6 +107,6 @@ A **barra lateral** é **fixa** (permanece na tela ao rolar o conteúdo) e **a m
 
 ## API (visão geral)
 
-As rotas **`/api/*`** exigem sessão autenticada; várias exigem papel **admin** ou combinações (comandas: admin/caixa/garçom; pagamento: admin/caixa; cardápio escrita: admin; etc.). Detalhes e lista completa em **README_ENTREGA_2.md**.
+As rotas **`/api/*`** exigem sessão autenticada; várias exigem papel **admin** ou combinações (comandas: admin/caixa/garçom; pagamento: admin/caixa; cardápio escrita: admin; etc.). Detalhes e lista completa em **README_ENTREGA_2.md**. Endpoints adicionais úteis: **`GET /api/admin/dashboard`** (métricas para a visão geral admin), **`GET /api/financeiro/ranking-itens`** (itens mais vendidos no período; admin e caixa).
 
 Para roteiro de apresentação em sala, use **ROTEIRO.md** (ajuste se o roteiro ainda citar telas antigas).

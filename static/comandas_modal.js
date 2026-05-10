@@ -90,19 +90,53 @@ async function abrirModalLancamentoComanda(idComanda) {
     }
     var titulo = "Comanda #" + comanda.id + " — Mesa " + (comanda.mesa || "—");
     var html = "<p class=\"modal-resumo\">Total atual: <strong>R$ " + Number(comanda.total).toFixed(2) + "</strong></p>";
-    html += "<div class=\"modal-itens-scroll\">";
+    html += "<div class=\"modal-busca-wrap\"><label class=\"modal-busca-label\">Buscar itens <input type=\"search\" id=\"modal-busca-item\" class=\"modal-busca-input\" placeholder=\"Filtrar pelo nome\" autocomplete=\"off\"></label></div>";
+    html += "<div class=\"modal-itens-scroll\" id=\"modal-itens-scroll-root\">";
+    var porCat = {};
     itensCardapio.forEach(function(item) {
-        var qtd = 0;
-        var linha = (comanda.itens || []).find(function(i) { return i.id_item === item.id; });
-        if (linha) qtd = linha.quantidade;
-        html += "<div class=\"modal-linha-item\"><label>" + escapeHtml(item.nome) + " <span class=\"preco-mini\">R$ " +
-            item.preco.toFixed(2) + "</span></label>" +
-            "<input type=\"number\" min=\"0\" class=\"modal-qtd-item\" data-id-item=\"" + item.id + "\" value=\"" + qtd + "\"></div>";
+        var cat = (item.categoria || "").trim() || "Sem categoria";
+        if (!porCat[cat]) porCat[cat] = [];
+        porCat[cat].push(item);
+    });
+    var cats = Object.keys(porCat).sort(function(a, b) {
+        return a.localeCompare(b, "pt-BR");
+    });
+    cats.forEach(function(cat) {
+        html += "<section class=\"modal-cat-grupo\">";
+        html += "<h4 class=\"modal-cat-titulo\">" + escapeHtml(cat) + "</h4>";
+        porCat[cat].forEach(function(item) {
+            var qtd = 0;
+            var linha = (comanda.itens || []).find(function(i) { return i.id_item === item.id; });
+            if (linha) qtd = linha.quantidade;
+            html += "<div class=\"modal-linha-item\"><label>" + escapeHtml(item.nome) + " <span class=\"preco-mini\">R$ " +
+                item.preco.toFixed(2) + "</span></label>" +
+                "<input type=\"number\" min=\"0\" class=\"modal-qtd-item\" data-id-item=\"" + item.id + "\" value=\"" + qtd + "\"></div>";
+        });
+        html += "</section>";
     });
     html += "</div><p id=\"modal-itens-msg\" class=\"msg-modal\"></p>";
     var rodape = "<button type=\"button\" class=\"btn-primario\" id=\"modal-itens-salvar\">Salvar na comanda</button>" +
         "<button type=\"button\" class=\"btn-secundario\" data-fechar-modal>Fechar</button>";
     abrirModalShell(titulo, html, rodape);
+    var inpBusca = document.getElementById("modal-busca-item");
+    if (inpBusca) {
+        inpBusca.addEventListener("input", function() {
+            var q = inpBusca.value.trim().toLowerCase();
+            document.querySelectorAll(".modal-linha-item").forEach(function(row) {
+                var lab = row.querySelector("label");
+                var texto = lab ? lab.textContent.toLowerCase() : "";
+                var ok = !q || texto.indexOf(q) >= 0;
+                row.style.display = ok ? "" : "none";
+            });
+            document.querySelectorAll(".modal-cat-grupo").forEach(function(sec) {
+                var vis = false;
+                sec.querySelectorAll(".modal-linha-item").forEach(function(row) {
+                    if (row.style.display !== "none") vis = true;
+                });
+                sec.style.display = vis ? "" : "none";
+            });
+        });
+    }
     document.getElementById("modal-itens-salvar").addEventListener("click", async function() {
         var inputs = document.querySelectorAll(".modal-qtd-item");
         var itens = [];

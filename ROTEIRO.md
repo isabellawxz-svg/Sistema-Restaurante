@@ -1,58 +1,37 @@
-# Explicação do sistema – Pedidos de Restaurante
+# Roteiro do sistema — comandas e gestão
 
-O sistema é dividido em três partes:  banco de dados, backend e frontend.
+Visão geral alinhada ao código atual. Detalhes de API, entregas e como rodar estão em [README.md](README.md), [README_ENTREGA_1.md](README_ENTREGA_1.md) e [README_ENTREGA_2.md](README_ENTREGA_2.md).
 
-**Banco de dados:** os dados ficam no SQLite, no arquivo `dados.db`. O cardápio e os pedidos são gravados e lidos a partir daí.
+## Arquitetura
 
-**Backend:** o Flask (em `app.py`) sobe um servidor na porta 5000. Ele atende as URLs da aplicação: devolve as páginas HTML e, nas rotas da API, lê ou grava no banco e responde em JSON.
+O sistema tem três camadas: **SQLite** (`dados.db`), **Flask** (`app.py`, porta 5000) e **front** em HTML/CSS/JS com templates Jinja2 (`templates/`, `static/`).
 
-**Frontend:** duas telas em HTML/CSS/JavaScript. A página principal mostra o cardápio, o formulário para anotar pedido (itens e quantidades) e a lista de pedidos. A página de admin permite cadastrar, editar e excluir itens do cardápio. Em ambas há uma barra de navegação no topo para ir de uma tela à outra.
+- **Autenticação:** sessão Flask; papéis **admin**, **caixa** e **garçom** definem o que cada usuário vê no menu lateral (`templates/_sidebar_staff.html`).
+- **Operação:** **comandas** (mesa/referência, cliente opcional) substituem o modelo antigo de “pedidos soltos”. Itens são lançados por um **modal** estilo PDV (`static/comandas_modal.js`).
+- **Estoque:** **insumos** com quantidade; **notas de compra** entram estoque; **composição** (ficha técnica) por item do cardápio. Ao **pagar** a comanda, o sistema baixa insumos e pode bloquear se faltar estoque.
+- **Financeiro:** resumo por período (receita de comandas quitadas, compras registradas) e relatórios complementares na própria aplicação.
 
----
+## Fluxo típico na demonstração
 
-## Banco de dados
+1. Acesse **`/login`** (primeira vez: usuário `admin` / `admin123` se o banco não tinha usuários — troque em uso real).
+2. **Admin:** cadastre ou confira **insumos**, **notas de compra**, **receitas** (composição dos pratos) e **cardápio** (itens, preços e categorias).
+3. **Garçom:** na tela **Salão**, abra comanda e **lance itens** no modal.
+4. **Caixa:** **pague** a comanda (forma de pagamento), conferindo baixa de estoque.
+5. **Financeiro** (admin ou caixa): intervalo de datas, totais e exportação quando disponível.
 
-O banco é criado pelo script `init_db.py` (rodado uma vez). Há três tabelas:
+## API (resumo)
 
-- **itens_cardapio:** `id`, `nome`, `preco`. Cada linha é um item do cardápio.
-- **pedidos:** `id`, `criado_em`. Cada linha é um pedido (só o cabeçalho).
-- **itens_pedido:** `id_pedido`, `id_item`, `quantidade`. Liga cada pedido aos itens do cardápio e às quantidades.
+Todas as rotas **`/api/*`** exigem sessão autenticada; permissões por rota estão descritas no README e implementadas em `app.py` (`@staff_required`).
 
-O relacionamento é: um pedido tem vários itens (via `itens_pedido`), e cada item aponta para um registro em `itens_cardapio`. Ao anotar um pedido, inserimos uma linha em `pedidos` e várias em `itens_pedido`. Ao listar o cardápio ou os pedidos, fazemos SELECT nessas tabelas.
+Inclui, entre outras: **`/api/cardapio`**, **`/api/comandas`** (CRUD e **`PATCH .../pagamento`**), **`/api/insumos`**, **`/api/notas-compra`**, **`/api/cardapio/<id>/composicao`**, **`/api/financeiro/resumo`**, além de endpoints de **dashboard** e **ranking de itens** usados na visão geral e no financeiro.
 
----
+## Onde está cada coisa no código
 
-## Backend (API)
+| Área | Arquivos principais |
+|------|---------------------|
+| Rotas e regras | `app.py` |
+| Layout e telas | `templates/`, especialmente `layout_admin.html`, `layout_operacional.html`, `admin/*.html` |
+| Comandas e modal | `static/app.js`, `static/comandas_modal.js` |
+| Estilo | `static/style.css` |
 
-O servidor em `app.py` expõe:
-
-- **Páginas:** `/` devolve a tela do cardápio e pedidos; `/admin` devolve a tela de cadastro de itens.
-
-- **API (JSON):**
-  - **GET /api/cardapio** — lista os itens do cardápio.
-  - **POST /api/cardapio** — cadastra um item (nome e preço no body).
-  - **PUT /api/cardapio/:id** — edita um item.
-  - **DELETE /api/cardapio/:id** — exclui um item (e as linhas em `itens_pedido` que o referenciam).
-  - **GET /api/pedidos** — lista todos os pedidos com seus itens.
-  - **GET /api/pedidos/:id** — retorna um pedido com itens (para edição).
-  - **POST /api/pedidos** — cria um pedido (body: lista de `id_item` e `quantidade`).
-  - **PUT /api/pedidos/:id** — altera os itens do pedido (substitui as quantidades).
-  - **DELETE /api/pedidos/:id** — exclui o pedido e seus itens.
-
-O navegador chama essas URLs; o Flask acessa o SQLite e devolve os dados em JSON. É uma API REST simples.
-
----
-
-## Frontend
-
-Na página principal, o JavaScript carrega o cardápio com **GET /api/cardapio** e monta a lista e os campos de quantidade. Ao clicar em “Enviar pedido”, monta a lista de itens com quantidade maior que zero e envia **POST /api/pedidos**. A lista de pedidos vem de **GET /api/pedidos** (chamada ao carregar a página e depois de enviar ou alterar um pedido). Cada pedido exibe botões “Editar” e “Excluir”; editar abre um formulário de quantidades e salva com **PUT /api/pedidos/:id**; excluir chama **DELETE /api/pedidos/:id**.
-
-Na página admin, o formulário de novo item envia **POST /api/cardapio**. A lista de itens é preenchida com **GET /api/cardapio**. Cada item tem “Editar” (campos inline de nome e preço, salvos com **PUT /api/cardapio/:id**) e “Excluir” (**DELETE /api/cardapio/:id**).
-
-O HTML define a estrutura, o CSS o visual, e o JavaScript usa `fetch` para falar com a API e atualizar o que aparece na tela com a resposta.
-
----
-
-## Fluxo de um pedido
-
-O usuário escolhe itens e quantidades e clica em “Enviar pedido”. O JavaScript envia **POST /api/pedidos** com essa lista. O Flask insere uma linha em `pedidos` e as linhas correspondentes em `itens_pedido`. Depois o frontend chama **GET /api/pedidos** de novo e atualiza a lista na tela. O caminho é: tela → API → banco → API → tela.
+O caminho completo de uma venda é: **tela → API Flask → SQLite → API → tela atualizada**.
