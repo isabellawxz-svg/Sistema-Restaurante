@@ -562,6 +562,120 @@ button:hover {
     font-size: 0.95rem;
 }
 
+/* Mapa de mesas (salão / caixa) */
+.mapa-mesas-section {
+    margin-bottom: 1.5rem;
+}
+
+.mapa-mesas-section h2 {
+    margin-top: 0;
+}
+
+.mapa-mesas-legenda {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+    font-size: 0.9rem;
+    color: #555;
+}
+
+.legenda-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.legenda-cor {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+.mesa-cor-livre {
+    background: #e8f5e9;
+    border-color: #2e7d32;
+}
+
+.mesa-cor-ocupada {
+    background: #ffebee;
+    border-color: #c62828;
+}
+
+.mesa-cor-reservada {
+    background: #fff8e1;
+    border-color: #f9a825;
+}
+
+.mapa-mesas-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 0.75rem;
+}
+
+.mesa-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 88px;
+    padding: 0.65rem 0.5rem;
+    border: 2px solid #ccc;
+    border-radius: 8px;
+    background: #fafafa;
+    cursor: pointer;
+    font-family: inherit;
+    text-align: center;
+    transition: box-shadow 0.15s ease, transform 0.1s ease;
+}
+
+.mesa-card:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    transform: translateY(-1px);
+}
+
+.mesa-card--livre {
+    border-color: #2e7d32;
+    background: #e8f5e9;
+}
+
+.mesa-card--ocupada {
+    border-color: #c62828;
+    background: #ffebee;
+}
+
+.mesa-card--reservada {
+    border-color: #f9a825;
+    background: #fff8e1;
+    cursor: not-allowed;
+    opacity: 0.92;
+}
+
+.mesa-card--reservada:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+.mesa-card-numero {
+    font-size: 1.35rem;
+    font-weight: bold;
+    color: #3e2723;
+    line-height: 1.2;
+}
+
+.mesa-card-meta {
+    margin-top: 0.35rem;
+    font-size: 0.72rem;
+    color: #555;
+    line-height: 1.35;
+}
+
+.msg-erro {
+    color: #b71c1c;
+    font-weight: bold;
+}
+
 .campos-identificacao {
     display: flex;
     flex-wrap: wrap;

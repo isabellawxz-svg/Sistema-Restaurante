@@ -17,6 +17,7 @@ DB_PATH = "dados.db"
 _HASH_METHOD = "pbkdf2:sha256"
 FORMAS_PAGAMENTO = ("dinheiro", "pix", "cartao")
 PAPEIS = ("admin", "caixa", "garcom")
+MESA_STATUS = ("livre", "ocupada", "reservada")
 
 
 def _auth_fail():
@@ -200,9 +201,100 @@ def _ensure_insumos_estoque_minimo(cursor):
         cursor.execute("ALTER TABLE insumos ADD COLUMN estoque_minimo REAL NOT NULL DEFAULT 0")
 
 
+def _ensure_mesas_schema(cursor):
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS mesas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            numero TEXT NOT NULL UNIQUE,
+            capacidade INTEGER NOT NULL DEFAULT 4,
+            status TEXT NOT NULL DEFAULT 'livre',
+            id_comanda_ativa INTEGER,
+            FOREIGN KEY (id_comanda_ativa) REFERENCES comandas(id)
+        )
+    """)
+    cursor.execute("PRAGMA table_info(comandas)")
+    cols = {r[1] for r in cursor.fetchall()}
+    if "id_mesa" not in cols:
+        cursor.execute("ALTER TABLE comandas ADD COLUMN id_mesa INTEGER REFERENCES mesas(id)")
+
+
+def _seed_mesas(cursor):
+    cursor.execute("SELECT COUNT(*) FROM mesas")
+    if cursor.fetchone()[0] > 0:
+        return
+    for i in range(1, 13):
+        cap = 4 if i <= 8 else 6
+        cursor.execute(
+            "INSERT INTO mesas (numero, capacidade, status) VALUES (?, ?, 'livre')",
+            (str(i), cap),
+        )
+
+
+def _sync_comandas_abertas_com_mesas(cursor):
+    """Vincula comandas abertas existentes às mesas pelo número (após migração)."""
+    cursor.execute(
+        """
+        SELECT c.id, c.mesa FROM comandas c
+        WHERE c.status = 'aberta' AND TRIM(COALESCE(c.mesa, '')) != ''
+        """
+    )
+    for row in cursor.fetchall():
+        cursor.execute(
+            "SELECT id, status, id_comanda_ativa FROM mesas WHERE numero = ?",
+            (row["mesa"].strip(),),
+        )
+        mesa = cursor.fetchone()
+        if not mesa:
+            continue
+        if mesa["status"] == "ocupada" and mesa["id_comanda_ativa"] not in (None, row["id"]):
+            continue
+        cursor.execute("UPDATE comandas SET id_mesa = ? WHERE id = ?", (mesa["id"], row["id"]))
+        cursor.execute(
+            """
+            UPDATE mesas SET status = 'ocupada', id_comanda_ativa = ?
+            WHERE id = ? AND (status = 'livre' OR id_comanda_ativa = ? OR id_comanda_ativa IS NULL)
+            """,
+            (row["id"], mesa["id"], row["id"]),
+        )
+
+
+def _liberar_mesa_por_comanda(cursor, id_comanda):
+    cursor.execute(
+        """
+        UPDATE mesas SET status = 'livre', id_comanda_ativa = NULL
+        WHERE id_comanda_ativa = ?
+        """,
+        (id_comanda,),
+    )
+
+
+def _ocupar_mesa_para_comanda(cursor, id_mesa, id_comanda):
+    cursor.execute(
+        "SELECT id, numero, status, id_comanda_ativa FROM mesas WHERE id = ?",
+        (id_mesa,),
+    )
+    mesa = cursor.fetchone()
+    if not mesa:
+        return "mesa não encontrada"
+    if mesa["status"] == "reservada":
+        return "mesa reservada — libere a reserva no admin antes de abrir comanda"
+    if mesa["status"] == "ocupada" and mesa["id_comanda_ativa"] not in (None, id_comanda):
+        return "mesa já está ocupada por outra comanda"
+    cursor.execute(
+        """
+        UPDATE mesas SET status = 'ocupada', id_comanda_ativa = ?
+        WHERE id = ?
+        """,
+        (id_comanda, id_mesa),
+    )
+    cursor.execute("UPDATE comandas SET id_mesa = ? WHERE id = ?", (id_mesa, id_comanda))
+    return None
+
+
 def ensure_schema():
     _ensure_legacy_pedidos_columns()
     conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS comandas (
@@ -241,8 +333,11 @@ def ensure_schema():
     _ensure_insumos_compras_composicao(cursor)
     _ensure_itens_cardapio_categoria(cursor)
     _ensure_insumos_estoque_minimo(cursor)
+    _ensure_mesas_schema(cursor)
+    _seed_mesas(cursor)
     conn.commit()
     _migrate_pedidos_para_comandas(cursor)
+    _sync_comandas_abertas_com_mesas(cursor)
     _seed_usuario_admin(cursor)
     conn.commit()
     conn.close()
@@ -295,10 +390,12 @@ def _montar_comanda(cursor, id_comanda, row):
         total_final = round(float(tq), 2)
     else:
         total_final = round(total_calc, 2)
+    id_mesa = row["id_mesa"] if "id_mesa" in row.keys() else None
     return {
         "id": id_comanda,
         "criado_em": row["criado_em"],
         "mesa": row["mesa"] or "",
+        "id_mesa": id_mesa,
         "cliente_nome": row["cliente_nome"] or "",
         "status": row["status"],
         "pagamento_status": row["pagamento_status"],
@@ -495,6 +592,12 @@ def admin_receitas():
 @staff_required("admin")
 def admin_financeiro():
     return render_template("admin/financeiro.html")
+
+
+@app.route("/admin/mesas")
+@staff_required("admin")
+def admin_mesas():
+    return render_template("admin/mesas.html")
 
 
 @app.route("/caixa/financeiro")
@@ -744,21 +847,21 @@ def listar_comandas():
     if situacao == "aberta":
         cursor.execute(
             """
-            SELECT id, criado_em, mesa, cliente_nome, status, pagamento_status, forma_pagamento, fechada_em, total_quitacao
+            SELECT id, criado_em, mesa, id_mesa, cliente_nome, status, pagamento_status, forma_pagamento, fechada_em, total_quitacao
             FROM comandas WHERE status = 'aberta' ORDER BY id DESC
             """
         )
     elif situacao == "fechada":
         cursor.execute(
             """
-            SELECT id, criado_em, mesa, cliente_nome, status, pagamento_status, forma_pagamento, fechada_em, total_quitacao
+            SELECT id, criado_em, mesa, id_mesa, cliente_nome, status, pagamento_status, forma_pagamento, fechada_em, total_quitacao
             FROM comandas WHERE status = 'fechada' ORDER BY COALESCE(fechada_em, criado_em) DESC, id DESC
             """
         )
     else:
         cursor.execute(
             """
-            SELECT id, criado_em, mesa, cliente_nome, status, pagamento_status, forma_pagamento, fechada_em, total_quitacao
+            SELECT id, criado_em, mesa, id_mesa, cliente_nome, status, pagamento_status, forma_pagamento, fechada_em, total_quitacao
             FROM comandas
             ORDER BY CASE WHEN status = 'aberta' THEN 0 ELSE 1 END, id DESC
             """
@@ -775,7 +878,7 @@ def obter_comanda(id_comanda):
     cursor = conn.cursor()
     cursor.execute(
         """
-        SELECT id, criado_em, mesa, cliente_nome, status, pagamento_status, forma_pagamento, fechada_em, total_quitacao
+        SELECT id, criado_em, mesa, id_mesa, cliente_nome, status, pagamento_status, forma_pagamento, fechada_em, total_quitacao
         FROM comandas WHERE id = ?
         """,
         (id_comanda,),
@@ -795,22 +898,50 @@ def abrir_comanda():
     dados = request.get_json() or {}
     mesa = (dados.get("mesa") or "").strip()
     cliente_nome = (dados.get("cliente_nome") or "").strip()
-    if not mesa:
-        return jsonify({"erro": "informe a mesa ou referência (balcão, mesa, etc.)"}), 400
+    id_mesa = dados.get("id_mesa")
     conn = get_db()
     cursor = conn.cursor()
+    if id_mesa is not None:
+        try:
+            id_mesa = int(id_mesa)
+        except (TypeError, ValueError):
+            return jsonify({"erro": "id_mesa inválido"}), 400
+        cursor.execute(
+            "SELECT id, numero, status, id_comanda_ativa FROM mesas WHERE id = ?",
+            (id_mesa,),
+        )
+        row_mesa = cursor.fetchone()
+        if not row_mesa:
+            conn.close()
+            return jsonify({"erro": "mesa não encontrada"}), 404
+        if row_mesa["status"] == "reservada":
+            conn.close()
+            return jsonify({"erro": "mesa reservada — altere o status no cadastro de mesas"}), 409
+        if row_mesa["status"] == "ocupada" and row_mesa["id_comanda_ativa"]:
+            conn.close()
+            return jsonify({"erro": "mesa já possui comanda aberta"}), 409
+        mesa = row_mesa["numero"]
+    if not mesa:
+        conn.close()
+        return jsonify({"erro": "informe a mesa ou referência (balcão, mesa, etc.)"}), 400
     cursor.execute(
         """
-        INSERT INTO comandas (mesa, cliente_nome, status, pagamento_status)
-        VALUES (?, ?, 'aberta', 'pendente')
+        INSERT INTO comandas (mesa, cliente_nome, status, pagamento_status, id_mesa)
+        VALUES (?, ?, 'aberta', 'pendente', ?)
         """,
-        (mesa, cliente_nome),
+        (mesa, cliente_nome, id_mesa if id_mesa is not None else None),
     )
     id_comanda = cursor.lastrowid
+    if id_mesa is not None:
+        err = _ocupar_mesa_para_comanda(cursor, id_mesa, id_comanda)
+        if err:
+            conn.rollback()
+            conn.close()
+            return jsonify({"erro": err}), 409
     conn.commit()
     cursor.execute(
         """
-        SELECT id, criado_em, mesa, cliente_nome, status, pagamento_status, forma_pagamento, fechada_em, total_quitacao
+        SELECT id, criado_em, mesa, id_mesa, cliente_nome, status, pagamento_status, forma_pagamento, fechada_em, total_quitacao
         FROM comandas WHERE id = ?
         """,
         (id_comanda,),
@@ -830,7 +961,7 @@ def atualizar_itens_comanda(id_comanda):
     cursor = conn.cursor()
     cursor.execute(
         """
-        SELECT id, criado_em, mesa, cliente_nome, status, pagamento_status, forma_pagamento, fechada_em, total_quitacao
+        SELECT id, criado_em, mesa, id_mesa, cliente_nome, status, pagamento_status, forma_pagamento, fechada_em, total_quitacao
         FROM comandas WHERE id = ?
         """,
         (id_comanda,),
@@ -857,7 +988,7 @@ def atualizar_itens_comanda(id_comanda):
     conn.commit()
     cursor.execute(
         """
-        SELECT id, criado_em, mesa, cliente_nome, status, pagamento_status, forma_pagamento, fechada_em, total_quitacao
+        SELECT id, criado_em, mesa, id_mesa, cliente_nome, status, pagamento_status, forma_pagamento, fechada_em, total_quitacao
         FROM comandas WHERE id = ?
         """,
         (id_comanda,),
@@ -884,7 +1015,7 @@ def pagar_comanda(id_comanda):
         cursor.execute("BEGIN IMMEDIATE")
         cursor.execute(
             """
-            SELECT id, criado_em, mesa, cliente_nome, status, pagamento_status, forma_pagamento, fechada_em, total_quitacao
+            SELECT id, criado_em, mesa, id_mesa, cliente_nome, status, pagamento_status, forma_pagamento, fechada_em, total_quitacao
             FROM comandas WHERE id = ?
             """,
             (id_comanda,),
@@ -916,6 +1047,7 @@ def pagar_comanda(id_comanda):
             """,
             (forma, agora, valor_quitacao, id_comanda),
         )
+        _liberar_mesa_por_comanda(cursor, id_comanda)
         conn.commit()
     except Exception:
         conn.rollback()
@@ -926,7 +1058,7 @@ def pagar_comanda(id_comanda):
     cursor = conn.cursor()
     cursor.execute(
         """
-        SELECT id, criado_em, mesa, cliente_nome, status, pagamento_status, forma_pagamento, fechada_em, total_quitacao
+        SELECT id, criado_em, mesa, id_mesa, cliente_nome, status, pagamento_status, forma_pagamento, fechada_em, total_quitacao
         FROM comandas WHERE id = ?
         """,
         (id_comanda,),
@@ -956,10 +1088,201 @@ def excluir_comanda(id_comanda):
         conn.close()
         return jsonify({"erro": "só é possível excluir comandas abertas e não pagas"}), 409
     cursor.execute("DELETE FROM itens_comanda WHERE id_comanda = ?", (id_comanda,))
+    _liberar_mesa_por_comanda(cursor, id_comanda)
     cursor.execute("DELETE FROM comandas WHERE id = ?", (id_comanda,))
     conn.commit()
     conn.close()
     return jsonify({"mensagem": "comanda excluída"}), 200
+
+
+def _montar_mesa_publica(cursor, row):
+    resumo = None
+    id_comanda = row["id_comanda_ativa"]
+    if id_comanda:
+        cursor.execute(
+            """
+            SELECT id, criado_em, mesa, id_mesa, cliente_nome, status, pagamento_status,
+                   forma_pagamento, fechada_em, total_quitacao
+            FROM comandas WHERE id = ?
+            """,
+            (id_comanda,),
+        )
+        c_row = cursor.fetchone()
+        if c_row and c_row["status"] == "aberta":
+            comanda = _montar_comanda(cursor, id_comanda, c_row)
+            resumo = {
+                "id": comanda["id"],
+                "cliente_nome": comanda["cliente_nome"],
+                "total": comanda["total"],
+                "itens_count": len(comanda["itens"]),
+            }
+        else:
+            cursor.execute(
+                "UPDATE mesas SET status = 'livre', id_comanda_ativa = NULL WHERE id = ?",
+                (row["id"],),
+            )
+            id_comanda = None
+    status = row["status"]
+    if not id_comanda and status == "ocupada":
+        status = "livre"
+    return {
+        "id": row["id"],
+        "numero": row["numero"],
+        "capacidade": row["capacidade"],
+        "status": status,
+        "id_comanda_ativa": id_comanda,
+        "comanda": resumo,
+    }
+
+
+# --- API mesas ---
+
+
+@app.route("/api/mesas", methods=["GET"])
+@staff_required("admin", "caixa", "garcom")
+def listar_mesas():
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT id, numero, capacidade, status, id_comanda_ativa
+        FROM mesas
+        ORDER BY CAST(numero AS INTEGER), numero
+        """
+    )
+    mesas = [_montar_mesa_publica(cursor, row) for row in cursor.fetchall()]
+    conn.commit()
+    conn.close()
+    return jsonify(mesas)
+
+
+@app.route("/api/mesas", methods=["POST"])
+@staff_required("admin")
+def criar_mesa():
+    dados = request.get_json() or {}
+    numero = (dados.get("numero") or "").strip()
+    if not numero:
+        return jsonify({"erro": "informe o número da mesa"}), 400
+    try:
+        capacidade = int(dados.get("capacidade", 4))
+    except (TypeError, ValueError):
+        return jsonify({"erro": "capacidade inválida"}), 400
+    if capacidade < 1:
+        return jsonify({"erro": "capacidade deve ser pelo menos 1"}), 400
+    status = (dados.get("status") or "livre").strip().lower()
+    if status not in MESA_STATUS:
+        return jsonify({"erro": "status deve ser livre, ocupada ou reservada"}), 400
+    if status == "ocupada":
+        return jsonify({"erro": "não é possível cadastrar mesa já como ocupada"}), 400
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            """
+            INSERT INTO mesas (numero, capacidade, status)
+            VALUES (?, ?, ?)
+            """,
+            (numero, capacidade, status),
+        )
+        id_mesa = cursor.lastrowid
+        conn.commit()
+    except sqlite3.IntegrityError:
+        conn.close()
+        return jsonify({"erro": "já existe mesa com este número"}), 409
+    cursor.execute(
+        "SELECT id, numero, capacidade, status, id_comanda_ativa FROM mesas WHERE id = ?",
+        (id_mesa,),
+    )
+    row = cursor.fetchone()
+    mesa = _montar_mesa_publica(cursor, row)
+    conn.close()
+    return jsonify(mesa), 201
+
+
+@app.route("/api/mesas/<int:id_mesa>", methods=["PUT"])
+@staff_required("admin")
+def atualizar_mesa(id_mesa):
+    dados = request.get_json() or {}
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT id, numero, capacidade, status, id_comanda_ativa FROM mesas WHERE id = ?",
+        (id_mesa,),
+    )
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return jsonify({"erro": "mesa não encontrada"}), 404
+    numero = (dados.get("numero") if "numero" in dados else row["numero"]).strip()
+    if not numero:
+        conn.close()
+        return jsonify({"erro": "número da mesa não pode ficar vazio"}), 400
+    capacidade = row["capacidade"]
+    if "capacidade" in dados:
+        try:
+            capacidade = int(dados["capacidade"])
+        except (TypeError, ValueError):
+            conn.close()
+            return jsonify({"erro": "capacidade inválida"}), 400
+        if capacidade < 1:
+            conn.close()
+            return jsonify({"erro": "capacidade deve ser pelo menos 1"}), 400
+    status = row["status"]
+    if "status" in dados:
+        status = (dados.get("status") or "").strip().lower()
+        if status not in MESA_STATUS:
+            conn.close()
+            return jsonify({"erro": "status deve ser livre, ocupada ou reservada"}), 400
+        if row["id_comanda_ativa"] and status in ("livre", "reservada"):
+            conn.close()
+            return jsonify({"erro": "mesa com comanda aberta — feche ou exclua a comanda antes de alterar o status"}), 409
+        if status == "ocupada" and not row["id_comanda_ativa"]:
+            conn.close()
+            return jsonify({"erro": "só marque ocupada ao abrir uma comanda no salão"}), 400
+    try:
+        cursor.execute(
+            """
+            UPDATE mesas SET numero = ?, capacidade = ?, status = ?
+            WHERE id = ?
+            """,
+            (numero, capacidade, status, id_mesa),
+        )
+        conn.commit()
+    except sqlite3.IntegrityError:
+        conn.close()
+        return jsonify({"erro": "já existe outra mesa com este número"}), 409
+    cursor.execute(
+        "SELECT id, numero, capacidade, status, id_comanda_ativa FROM mesas WHERE id = ?",
+        (id_mesa,),
+    )
+    mesa = _montar_mesa_publica(cursor, cursor.fetchone())
+    conn.close()
+    return jsonify(mesa)
+
+
+@app.route("/api/mesas/<int:id_mesa>", methods=["DELETE"])
+@staff_required("admin")
+def excluir_mesa(id_mesa):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT id, status, id_comanda_ativa FROM mesas WHERE id = ?",
+        (id_mesa,),
+    )
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return jsonify({"erro": "mesa não encontrada"}), 404
+    if row["id_comanda_ativa"]:
+        conn.close()
+        return jsonify({"erro": "não é possível excluir mesa com comanda aberta"}), 409
+    if row["status"] == "ocupada":
+        conn.close()
+        return jsonify({"erro": "mesa consta como ocupada"}), 409
+    cursor.execute("DELETE FROM mesas WHERE id = ?", (id_mesa,))
+    conn.commit()
+    conn.close()
+    return jsonify({"mensagem": "mesa excluída"}), 200
 
 
 # --- API insumos, notas de compra, composição e financeiro ---

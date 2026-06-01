@@ -39,27 +39,41 @@ function initModalComandas() {
     });
 }
 
-function abrirModalNovaComanda() {
+function abrirModalNovaComanda(opts) {
+    opts = opts || {};
+    var idMesa = opts.id_mesa != null ? opts.id_mesa : null;
+    var mesaNumero = opts.mesaNumero || "";
+    var titulo = idMesa ? "Nova comanda — Mesa " + mesaNumero : "Nova comanda";
+    var mesaAttrs = "";
+    if (idMesa) {
+        mesaAttrs = " value=\"" + escapeHtml(String(mesaNumero)) + "\" readonly";
+    }
     var corpo = "<div class=\"modal-form-grid\">" +
-        "<label>Mesa / referência<br><input type=\"text\" id=\"modal-nc-mesa\" maxlength=\"40\" placeholder=\"Ex.: 12, balcão\"></label>" +
+        (idMesa ? "<input type=\"hidden\" id=\"modal-nc-id-mesa\" value=\"" + idMesa + "\">" : "") +
+        "<label>Mesa / referência<br><input type=\"text\" id=\"modal-nc-mesa\" maxlength=\"40\" placeholder=\"Ex.: 12, balcão\"" + mesaAttrs + "></label>" +
         "<label>Cliente (opcional)<br><input type=\"text\" id=\"modal-nc-cliente\" maxlength=\"80\"></label>" +
         "</div><p id=\"modal-nc-msg\" class=\"msg-modal\"></p>";
     var rodape = "<button type=\"button\" class=\"btn-primario\" id=\"modal-nc-criar\">Criar comanda</button>" +
         "<button type=\"button\" class=\"btn-secundario\" data-fechar-modal>Cancelar</button>";
-    abrirModalShell("Nova comanda", corpo, rodape);
+    abrirModalShell(titulo, corpo, rodape);
     document.getElementById("modal-nc-criar").addEventListener("click", async function() {
         var mesa = document.getElementById("modal-nc-mesa").value.trim();
         var cliente = document.getElementById("modal-nc-cliente").value.trim();
+        var idMesaEl = document.getElementById("modal-nc-id-mesa");
         var msg = document.getElementById("modal-nc-msg");
         msg.textContent = "";
-        if (!mesa) {
+        if (!mesa && !idMesaEl) {
             msg.textContent = "Informe a mesa ou referência.";
             return;
+        }
+        var payload = { mesa: mesa, cliente_nome: cliente };
+        if (idMesaEl) {
+            payload.id_mesa = parseInt(idMesaEl.value, 10);
         }
         var res = await apiFetch("/api/comandas", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ mesa: mesa, cliente_nome: cliente })
+            body: JSON.stringify(payload)
         });
         if (!res) return;
         var data = await res.json();
@@ -69,6 +83,7 @@ function abrirModalNovaComanda() {
         }
         fecharModalComanda();
         carregarComandas();
+        if (typeof carregarMapaMesas === "function") carregarMapaMesas();
         abrirModalLancamentoComanda(data.id);
     });
 }
@@ -157,5 +172,6 @@ async function abrirModalLancamentoComanda(idComanda) {
         }
         fecharModalComanda();
         carregarComandas();
+        if (typeof carregarMapaMesas === "function") carregarMapaMesas();
     });
 }

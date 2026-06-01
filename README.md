@@ -8,6 +8,7 @@ Aplicação web didática em **Python (Flask)**, **SQLite** e **HTML/CSS/JavaScr
 |---------|----------|
 | [README_ENTREGA_1.md](README_ENTREGA_1.md) | Primeira entrega: núcleo pedagógico (camadas, SQLite, API, front com cardápio e fluxo inicial). |
 | [README_ENTREGA_2.md](README_ENTREGA_2.md) | Segunda entrega: comandas, papéis, sidebar, modal de lançamento, estoque, notas de compra, ficha técnica, financeiro. |
+| [README_ENTREGA_3.md](README_ENTREGA_3.md) | Terceira entrega: cadastro de mesas, mapa visual no salão/caixa, sincronização mesa ↔ comanda. |
 
 ## Stack
 
@@ -83,6 +84,7 @@ A **barra lateral** é **fixa** (permanece na tela ao rolar o conteúdo) e **a m
 ├── README.md                 ← Visão geral (este arquivo)
 ├── README_ENTREGA_1.md
 ├── README_ENTREGA_2.md
+├── README_ENTREGA_3.md
 ├── ROTEIRO.md
 ├── requirements.txt
 ├── app.py                    ← Rotas, API e regras de negócio
@@ -107,6 +109,6 @@ A **barra lateral** é **fixa** (permanece na tela ao rolar o conteúdo) e **a m
 
 ## API (visão geral)
 
-As rotas **`/api/*`** exigem sessão autenticada; várias exigem papel **admin** ou combinações (comandas: admin/caixa/garçom; pagamento: admin/caixa; cardápio escrita: admin; etc.). Detalhes e lista completa em **README_ENTREGA_2.md**. Endpoints adicionais úteis: **`GET /api/admin/dashboard`** (métricas para a visão geral admin), **`GET /api/financeiro/ranking-itens`** (itens mais vendidos no período; admin e caixa).
+As rotas **`/api/*`** exigem sessão autenticada; várias exigem papel **admin** ou combinações (comandas: admin/caixa/garçom; pagamento: admin/caixa; cardápio escrita: admin; etc.). Detalhes e lista completa em **README_ENTREGA_2.md** e **README_ENTREGA_3.md** (mesas). Endpoints adicionais úteis: **`GET /api/admin/dashboard`** (métricas para a visão geral admin), **`GET /api/financeiro/ranking-itens`** (itens mais vendidos no período; admin e caixa).
 
 Para roteiro de apresentação em sala, use **ROTEIRO.md** (ajuste se o roteiro ainda citar telas antigas).

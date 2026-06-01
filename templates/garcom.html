@@ -2,9 +2,14 @@
 {% block title %}Salão{% endblock %}
 {% block h1 %}Salão — comandas{% endblock %}
 {% block content %}
+<section class="mapa-mesas-section">
+    <h2>Mapa do salão</h2>
+    <p class="intro-comanda">Clique em uma mesa <strong>livre</strong> para abrir comanda ou em uma <strong>ocupada</strong> para lançar itens. Mesas <strong>reservadas</strong> só liberam no cadastro (admin).</p>
+    <div id="mapa-mesas" class="mapa-mesas-wrap" aria-live="polite">Carregando mesas…</div>
+</section>
 <section class="ops-acoes-topo">
-    <p class="intro-comanda">Abra uma nova comanda ou selecione uma aberta para <strong>lançar itens no modal</strong>. O pagamento é feito no caixa.</p>
-    <button type="button" class="btn-primario" id="btn-nova-comanda-modal">+ Nova comanda</button>
+    <p class="intro-comanda">Também é possível abrir comanda avulsa (balcão, delivery) sem vincular a uma mesa do mapa.</p>
+    <button type="button" class="btn-primario" id="btn-nova-comanda-modal">+ Comanda avulsa</button>
 </section>
 <section class="comandas comandas-abertas">
     <h2>Comandas abertas</h2>
@@ -16,12 +21,18 @@
 </section>
 {% endblock %}
 {% block scripts %}
+<script src="/static/salao_mesas.js"></script>
 <script>
 window.PERFIL_COMANDAS = "garcom";
 document.addEventListener("DOMContentLoaded", function() {
     initModalComandas();
-    carregarCardapio().then(function() { carregarComandas(); });
-    document.getElementById("btn-nova-comanda-modal").addEventListener("click", abrirModalNovaComanda);
+    carregarCardapio().then(function() {
+        carregarMapaMesas();
+        carregarComandas();
+    });
+    document.getElementById("btn-nova-comanda-modal").addEventListener("click", function() {
+        abrirModalNovaComanda();
+    });
 });
 </script>
 {% endblock %}

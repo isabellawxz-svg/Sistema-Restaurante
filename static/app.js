@@ -183,6 +183,7 @@ async function carregarComandas() {
         } else {
             fechadas.forEach(function(c) { renderBlocoComanda(c, divFe, perfil); });
         }
+        if (typeof carregarMapaMesas === "function") carregarMapaMesas();
     } catch (err) {
         console.error("Erro ao carregar comandas:", err);
     }

@@ -1,0 +1,26 @@
+{% extends "layout_admin.html" %}
+{% block title %}Mesas{% endblock %}
+{% block h1 %}Mesas do salão{% endblock %}
+{% block content %}
+<section>
+    <p class="intro-comanda">Cadastre as mesas do restaurante. No <strong>Salão</strong>, garçom e caixa veem o mapa: mesa <strong>livre</strong> abre comanda; <strong>ocupada</strong> abre a comanda ativa; <strong>reservada</strong> bloqueia novo atendimento até liberar aqui.</p>
+    <form id="form-mesa-admin" class="form-inline-admin">
+        <h2>Nova mesa</h2>
+        <label>Número <input type="text" id="mesa-numero" required maxlength="20" placeholder="Ex.: 13, VIP-1"></label>
+        <label>Capacidade (lugares) <input type="number" id="mesa-capacidade" min="1" value="4"></label>
+        <label>Status inicial
+            <select id="mesa-status-nova">
+                <option value="livre">Livre</option>
+                <option value="reservada">Reservada</option>
+            </select>
+        </label>
+        <button type="submit">Cadastrar mesa</button>
+    </form>
+    <p id="msg-mesas-admin"></p>
+    <h2>Mesas cadastradas</h2>
+    <div id="lista-mesas-admin"></div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script src="/static/admin_mesas.js"></script>
+{% endblock %}

@@ -103,6 +103,31 @@ def criar_banco():
         )
     """)
 
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS mesas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            numero TEXT NOT NULL UNIQUE,
+            capacidade INTEGER NOT NULL DEFAULT 4,
+            status TEXT NOT NULL DEFAULT 'livre',
+            id_comanda_ativa INTEGER,
+            FOREIGN KEY (id_comanda_ativa) REFERENCES comandas(id)
+        )
+    """)
+
+    cursor.execute("PRAGMA table_info(comandas)")
+    cols_comanda = {row[1] for row in cursor.fetchall()}
+    if "id_mesa" not in cols_comanda:
+        cursor.execute("ALTER TABLE comandas ADD COLUMN id_mesa INTEGER REFERENCES mesas(id)")
+
+    cursor.execute("SELECT COUNT(*) FROM mesas")
+    if cursor.fetchone()[0] == 0:
+        for i in range(1, 13):
+            cap = 4 if i <= 8 else 6
+            cursor.execute(
+                "INSERT INTO mesas (numero, capacidade, status) VALUES (?, ?, 'livre')",
+                (str(i), cap),
+            )
+
     cursor.execute("SELECT COUNT(*) FROM itens_cardapio")
     if cursor.fetchone()[0] == 0:
         cursor.executemany(

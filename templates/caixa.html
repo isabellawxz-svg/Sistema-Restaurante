@@ -2,6 +2,11 @@
 {% block title %}Caixa{% endblock %}
 {% block h1 %}Caixa — comandas{% endblock %}
 {% block content %}
+<section class="mapa-mesas-section">
+    <h2>Mapa do salão</h2>
+    <p class="intro-comanda">Visualize mesas ocupadas e abra a comanda para conferir itens ou registrar pagamento na lista abaixo.</p>
+    <div id="mapa-mesas" class="mapa-mesas-wrap" aria-live="polite">Carregando mesas…</div>
+</section>
 <section class="ops-acoes-topo">
     <p class="intro-comanda">Conferência, <strong>ajuste de itens no modal</strong> (como no salão) e registro de pagamento. Comandas com <strong>receita cadastrada</strong> baixam estoque ao pagar; se faltar insumo, o sistema bloqueia a quitação.</p>
     <button type="button" class="btn-primario" id="btn-nova-comanda-modal">+ Nova comanda</button>
@@ -16,12 +21,18 @@
 </section>
 {% endblock %}
 {% block scripts %}
+<script src="/static/salao_mesas.js"></script>
 <script>
 window.PERFIL_COMANDAS = "caixa";
 document.addEventListener("DOMContentLoaded", function() {
     initModalComandas();
-    carregarCardapio().then(function() { carregarComandas(); });
-    document.getElementById("btn-nova-comanda-modal").addEventListener("click", abrirModalNovaComanda);
+    carregarCardapio().then(function() {
+        carregarMapaMesas();
+        carregarComandas();
+    });
+    document.getElementById("btn-nova-comanda-modal").addEventListener("click", function() {
+        abrirModalNovaComanda();
+    });
 });
 </script>
 {% endblock %}
